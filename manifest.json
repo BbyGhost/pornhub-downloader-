@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Pornhub Video Downloader",
+  "version": "1.5",
+  "description": "Pornhub video download with one click.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "*://*.pornhub.com/*",
+    "*://*.pornhubpremium.com/*",
+    "*://*.pornhub.org/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.pornhub.com/*", 
+        "*://*.pornhubpremium.com/*",
+        "*://*.pornhub.org/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": [
+        "*://*.pornhub.com/*", 
+        "*://*.pornhubpremium.com/*",
+        "*://*.pornhub.org/*"
+      ]
+    }
+  ]
+}
