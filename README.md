@@ -1,32 +1,21 @@
-# pornhub-downloader-
-A lightweight browser extension designed to enhance the user experience on Pornhub. Features include custom UI themes, video playback controls, and streamlined navigation.
-🚀 How to Install the Extension
-Since this extension is currently hosted on GitHub, you can install it manually using Developer Mode in your browser. This works for Chrome, Brave, Edge, and most Chromium-based browsers.
+# Universal Video Downloader
 
-📥 Step 1: Download the Extension
-Click the green Code button at the top of this repository.
+Chrome MV3 extension for downloading browser-accessible media. It detects direct video resources on pages and offers a fast direct download. An optional local FFmpeg helper converts non-MP4 media to MP4.
 
-Select Download ZIP.
+## Install
 
-Once downloaded, extract the ZIP file to a folder on your computer that you don't plan on moving or deleting.
+1. Download/clone this repository.
+2. Open `chrome://extensions`.
+3. Enable **Developer mode**.
+4. Click **Load unpacked** and select the repository folder.
+5. Open a page containing an accessible video; the detector will show a download panel when it finds direct media URLs.
 
-🛠️ Step 2: Enable Developer Mode
-Open your browser and navigate to the extensions page:
+## MP4 conversion
 
-Chrome/Brave: Type chrome://extensions/ in the address bar.
+Install FFmpeg and Python, then from `helper/` run `python server.py`. Use **Convert → MP4** in the page panel. Converted files are placed in `helper/converted/`.
 
-Edge: Type edge://extensions/ in the address bar.
+## Important limitations
 
-In the top-right corner, toggle the switch that says Developer mode to ON.
+This extension works with media that the browser/page makes accessible as direct URLs. It does not bypass DRM, encrypted media, authentication, paywalls, CAPTCHAs, or other access controls. Some sites use signed URLs, session-bound headers, MSE, HLS/DASH, or other delivery methods that cannot be reliably downloaded by a generic extension.
 
-📂 Step 3: Load the Extension
-Click the Load unpacked button that appears in the top-left menu.
-
-A file browser will open. Select the folder where you extracted the extension files (the folder containing the manifest.json file).
-
-Click Select Folder (or Open).
-
-✅ Step 4: Verification
-You should now see the extension icon in your list of active extensions.
-
-For easy access, click the Puzzle Piece icon next to your address bar and Pin the extension to your toolbar.
+Use it only for content you are authorized to download and convert, and respect the site's terms and copyright.
