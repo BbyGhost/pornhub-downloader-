@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Universal Video Downloader",
-  "version": "2.1.0",
-  "description": "Detect browser-accessible video resources, download them directly, and optionally convert supported media to MP4.",
+  "version": "2.2.0",
+  "description": "Site-agnostic downloader for browser-accessible video resources with HLS/DASH detection and optional MP4 conversion.",
   "permissions": ["activeTab", "scripting", "downloads", "storage", "webRequest"],
   "host_permissions": ["<all_urls>", "http://127.0.0.1:8765/*"],
   "action": {"default_popup": "popup.html"},
