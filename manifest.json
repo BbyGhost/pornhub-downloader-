@@ -1,33 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "Pornhub Video Downloader",
-  "version": "1.5",
-  "description": "Pornhub video download with one click.",
-  "permissions": ["activeTab", "scripting"],
-  "host_permissions": [
-    "*://*.pornhub.com/*",
-    "*://*.pornhubpremium.com/*",
-    "*://*.pornhub.org/*"
-  ],
+  "name": "Universal Video Downloader",
+  "version": "2.0.0",
+  "description": "Download browser-accessible video resources and optionally convert them to MP4 with a local FFmpeg helper.",
+  "permissions": ["activeTab", "scripting", "downloads", "storage"],
+  "host_permissions": ["<all_urls>", "http://127.0.0.1:8765/*"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "content_scripts": [
     {
-      "matches": [
-        "*://*.pornhub.com/*", 
-        "*://*.pornhubpremium.com/*",
-        "*://*.pornhub.org/*"
-      ],
+      "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_end"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["inject.js"],
-      "matches": [
-        "*://*.pornhub.com/*", 
-        "*://*.pornhubpremium.com/*",
-        "*://*.pornhub.org/*"
-      ]
+      "run_at": "document_idle"
     }
   ]
 }
