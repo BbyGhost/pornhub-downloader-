@@ -1,4 +1,4 @@
-# VideoFlow Fresh — Quality + Progress
+# VideoFlow Downloader
 
 A Chrome MV3 extension with a one-click download button placed directly on supported HTML5 video players. It uses a local FFmpeg native bridge for MP4 output and reports download progress.
 
