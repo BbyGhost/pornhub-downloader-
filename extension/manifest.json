@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "VideoFlow Fresh — Quality + Progress",
+  "version": "3.1.0",
+  "description": "One-click MP4 downloader for configured supported sites.",
+  "permissions": ["nativeMessaging", "cookies", "storage"],
+  "host_permissions": [
+    "https://www.xvideos.com/*", "https://xvideos.com/*",
+    "https://www.pornhub.com/*", "https://pornhub.com/*",
+    "https://www.xhamster.com/*", "https://xhamster.com/*",
+    "https://www.xnxx.com/*", "https://xnxx.com/*",
+    "https://www.youporn.com/*", "https://youporn.com/*",
+    "https://www.eporner.com/*", "https://eporner.com/*",
+    "https://www.redtube.com/*", "https://redtube.com/*",
+    "https://www.sxyprn.com/*", "https://sxyprn.com/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "VideoFlow One-Click" },
+  "content_scripts": [{
+    "matches": [
+      "https://www.xvideos.com/*", "https://xvideos.com/*",
+      "https://www.pornhub.com/*", "https://pornhub.com/*",
+      "https://www.xhamster.com/*", "https://xhamster.com/*",
+      "https://www.xnxx.com/*", "https://xnxx.com/*",
+      "https://www.youporn.com/*", "https://youporn.com/*",
+      "https://www.eporner.com/*", "https://eporner.com/*",
+      "https://www.redtube.com/*", "https://redtube.com/*",
+      "https://www.sxyprn.com/*", "https://sxyprn.com/*"
+    ],
+    "all_frames": true,
+    "match_about_blank": true,
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }],
+  "web_accessible_resources": [{
+    "resources": ["page-hook.js"],
+    "matches": [
+      "https://www.xvideos.com/*", "https://xvideos.com/*",
+      "https://www.pornhub.com/*", "https://pornhub.com/*",
+      "https://www.xhamster.com/*", "https://xhamster.com/*",
+      "https://www.xnxx.com/*", "https://xnxx.com/*",
+      "https://www.youporn.com/*", "https://youporn.com/*",
+      "https://www.eporner.com/*", "https://eporner.com/*",
+      "https://www.redtube.com/*", "https://redtube.com/*",
+      "https://www.sxyprn.com/*", "https://sxyprn.com/*"
+    ]
+  }]
+}
