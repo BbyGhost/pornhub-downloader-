@@ -102,7 +102,7 @@
         if (r && r.width >= 300 && r.height >= 150) return el;
       }
     }
-    const selectors = [".video-js", ".jwplayer", ".plyr", ".vjs-tech", "[class*="player"]", "[id*="player"]"];
+    const selectors = [".video-js", ".jwplayer", ".plyr", ".vjs-tech", "[class*=\"player\"]", "[id*=\"player\"]"];
     for (const selector of selectors) {
       try {
         const el = document.querySelector(selector), r = el?.getBoundingClientRect();
