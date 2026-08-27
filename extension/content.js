@@ -153,7 +153,14 @@
   function positionWidget() {
     if (!widget) return;
     const anchor = activeAnchor || activeVideo;
-    if (!anchor) { widget.container.style.display = "none"; return; }
+    if (!anchor) {
+      widget.container.style.display = "block";
+      widget.container.style.left = "auto";
+      widget.container.style.right = "20px";
+      widget.container.style.top = "auto";
+      widget.container.style.bottom = "20px";
+      return;
+    }
     const rect = anchor.getBoundingClientRect();
     const visible = rect.width >= 120 && rect.height >= 70 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
     if (!visible) { widget.container.style.display = "none"; return; }
@@ -269,7 +276,6 @@
       const fallback = findPlayerAnchor(null);
       if (fallback) activeAnchor = fallback;
     }
-    if (!activeVideo && !activeAnchor) { if (widget) widget.container.style.display = "none"; return; }
     createWidget();
     positionWidget();
   }
@@ -309,5 +315,7 @@
   window.addEventListener("scroll", positionWidget, { passive:true });
   window.addEventListener("resize", positionWidget, { passive:true });
   setInterval(scan, 500);
+  createWidget();
+  positionWidget();
   scan();
 })();
