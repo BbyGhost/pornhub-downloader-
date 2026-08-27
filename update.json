@@ -1,10 +1,10 @@
 {
-  "version": "3.2.9",
+  "version": "3.2.10",
   "released": "2026-08-28",
   "notes": [
-    "Fix toolbar icon: real PNG assets",
-    "Premium VideoFlow icon in toolbar and extension manager",
-    "Automatic updater test"
+    "Fix extension popup not opening",
+    "Add real toolbar and extension icons",
+    "Updater test release"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
