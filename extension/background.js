@@ -1,6 +1,17 @@
 const HOST = "com.videoflow.fresh";
 
-function nativeRequest(message, tabId) {
+async function getCookieHeader(url) {
+  try {
+    const cookies = await chrome.cookies.getAll({ url });
+    if (!cookies?.length) return "";
+    return cookies.map(c => `${c.name}=${c.value}`).join("; ");
+  } catch (e) {
+    console.warn("VideoFlow cookies:", e);
+    return "";
+  }
+}
+
+async function nativeRequest(message, tabId) {
   return new Promise((resolve, reject) => {
     let port;
     try { port = chrome.runtime.connectNative(HOST); }
@@ -37,14 +48,23 @@ function nativeRequest(message, tabId) {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.type === "vf-probe") {
-    nativeRequest({action:"probe", url:msg.url, referer:msg.referer||"", origin:msg.origin||"", userAgent:msg.userAgent||""}, sender.tab?.id)
-      .then(r => sendResponse({ok:true, result:r}))
+    (async () => {
+      const cookie = await getCookieHeader(msg.url);
+      return nativeRequest({
+        action: "probe", url: msg.url, referer: msg.referer || "",
+        origin: msg.origin || "", userAgent: msg.userAgent || "", cookie
+      }, sender.tab?.id);
+    })().then(r => sendResponse({ok:true,result:r}))
       .catch(e => sendResponse({ok:false,error:e.message}));
     return true;
   }
+
   if (msg?.type === "vf-download") {
-    nativeRequest({...msg.job, action:"download"}, sender.tab?.id)
-      .then(r => sendResponse({ok:true,result:r}))
+    (async () => {
+      const job = {...msg.job};
+      job.cookie = await getCookieHeader(job.url);
+      return nativeRequest({...job, action:"download"}, sender.tab?.id);
+    })().then(r => sendResponse({ok:true,result:r}))
       .catch(e => sendResponse({ok:false,error:e.message}));
     return true;
   }
