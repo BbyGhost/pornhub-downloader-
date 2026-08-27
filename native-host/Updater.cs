@@ -101,7 +101,8 @@ internal static class Program
                         throw new Exception("Native bridge update failed. Code: " + installer.ExitCode);
                 }
 
-                WriteStatus(root, true, "Updated successfully.", local.version, remote.version);
+                    WriteStatus(root, true, "Updated successfully.", local.version, remote.version);
+                ScheduleSelfDelete();
                 return 0;
             }
             finally
@@ -112,8 +113,27 @@ internal static class Program
         catch (Exception ex)
         {
             WriteStatus(root, false, ex.Message, "", "");
+            ScheduleSelfDelete();
             return 1;
         }
+    }
+
+    static void ScheduleSelfDelete()
+    {
+        try
+        {
+            string exe = Environment.ProcessPath ?? "";
+            if (string.IsNullOrWhiteSpace(exe)) return;
+            var psi = new System.Diagnostics.ProcessStartInfo("cmd.exe")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            psi.ArgumentList.Add("/c");
+            psi.ArgumentList.Add($"ping 127.0.0.1 -n 3 >nul & del /f /q \"{exe}\"");
+            System.Diagnostics.Process.Start(psi);
+        }
+        catch {}
     }
 
     static bool Newer(string a, string b)
