@@ -52,6 +52,15 @@ internal static class Program
         return "ffmpeg.exe";
     }
 
+    static string Ffprobe()
+    {
+        string local=Path.Combine(AppContext.BaseDirectory,"ffprobe.exe");
+        if(File.Exists(local)) return local;
+        string winget=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Microsoft","WinGet","Links","ffprobe.exe");
+        if(File.Exists(winget)) return winget;
+        return "ffprobe.exe";
+    }
+
     static void AddNetworkFamily(ProcessStartInfo psi,string url)
     {
         try
@@ -84,18 +93,45 @@ internal static class Program
     {
         try
         {
-            var psi=new ProcessStartInfo{FileName=Ffmpeg(),UseShellExecute=false,RedirectStandardError=true,RedirectStandardOutput=true,CreateNoWindow=true};
-            psi.ArgumentList.Add("-hide_banner"); AddNetworkFamily(psi,url); AddHeaders(psi,referer,origin,ua,cookie); psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url); psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:v?"); psi.ArgumentList.Add("-f");psi.ArgumentList.Add("null");psi.ArgumentList.Add("-");
-            using var p=Process.Start(psi)!; string err=p.StandardError.ReadToEnd(); p.WaitForExit();
-            var list=new List<object>();
-            foreach(var line in err.Split('\n'))
+            var psi=new ProcessStartInfo{FileName=Ffprobe(),UseShellExecute=false,RedirectStandardError=true,RedirectStandardOutput=true,CreateNoWindow=true};
+            psi.ArgumentList.Add("-v");psi.ArgumentList.Add("error");
+            AddNetworkFamily(psi,url);AddHeaders(psi,referer,origin,ua,cookie);
+            psi.ArgumentList.Add("-show_entries");psi.ArgumentList.Add("stream=index,codec_type,width,height,r_frame_rate");
+            psi.ArgumentList.Add("-of");psi.ArgumentList.Add("json");psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);
+
+            using var p=Process.Start(psi)!;
+            if(!p.WaitForExit(12000))
             {
-                var m=System.Text.RegularExpressions.Regex.Match(line,@"Stream #\d+:(\d+).*Video:.*?(\d{2,5})x(\d{2,5})(?:.*?(\d+(?:\.\d+)?) fps)?");
-                if(m.Success && int.TryParse(m.Groups[3].Value,out int h) && int.TryParse(m.Groups[1].Value,out int streamIndex)) list.Add(new {height=h,width=int.Parse(m.Groups[2].Value),fps=m.Groups[4].Success?m.Groups[4].Value:"",streamIndex});
+                try{p.Kill(true);}catch{}
+                Send(new {@event="probe",qualities=new List<object>()});
+                return;
             }
-            Send(new {@event="probe",qualities=list});
+
+            string output=p.StandardOutput.ReadToEnd();
+            var list=new List<object>();
+            try
+            {
+                using var json=JsonDocument.Parse(output);
+                if(json.RootElement.TryGetProperty("streams",out var streams))
+                {
+                    foreach(var s in streams.EnumerateArray())
+                    {
+                        if(!s.TryGetProperty("codec_type",out var ct) || ct.GetString()!="video") continue;
+                        int width=s.TryGetProperty("width",out var w)&&w.TryGetInt32(out var wi)?wi:0;
+                        int height=s.TryGetProperty("height",out var h)&&h.TryGetInt32(out var he)?he:0;
+                        int index=s.TryGetProperty("index",out var ix)&&ix.TryGetInt32(out var ii)?ii:0;
+                        string fps=s.TryGetProperty("r_frame_rate",out var fr)?fr.GetString()??"":"";
+                        if(width>0 && height>0) list.Add(new {height,width,fps,streamIndex=index});
+                    }
+                }
+            }
+            catch {}
+
+            // Remove duplicate resolutions while preserving the best stream for each height.
+            var unique=list.Cast<dynamic>().GroupBy(x => (int)x.height).Select(g => g.OrderByDescending(x => (int)x.width).First()).OrderByDescending(x => (int)x.height).ToList();
+            Send(new {@event="probe",qualities=unique});
         }
-        catch(Exception ex){Send(new {@event="error",error=ex.Message});}
+        catch(Exception ex){Send(new {@event="probe",qualities=new List<object>()});}
     }
 
     static void Download(string url,string filename,string referer,string origin,string ua,string cookie,int videoStream)
