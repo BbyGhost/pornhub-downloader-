@@ -37,6 +37,7 @@ internal static class Program
                 if (action == "probe") Probe(url,referer,origin,ua,cookie);
                 else if (action == "download") Download(url,Get(root,"filename"),referer,origin,ua,cookie,videoStream);
                 else if (action == "update") { Update(); return; }
+                else if (action == "update-status") Status();
             }
         }
         catch(Exception ex) { Log(ex); Send(new {@event="error", error=ex.Message}); }
@@ -131,6 +132,28 @@ internal static class Program
             Send(new {@event="probe",qualities=list});
         }
         catch(Exception ex){Send(new {@event="probe",qualities=new List<object>()});}
+    }
+
+    static void Status()
+    {
+        try
+        {
+            string root = "";
+            string cfg = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VideoFlowNative", "install-config.json");
+            if (File.Exists(cfg))
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(cfg));
+                root = doc.RootElement.TryGetProperty("installRoot", out var r) ? r.GetString() ?? "" : "";
+            }
+            string status = Path.Combine(root, ".videoflow-update.json");
+            if (File.Exists(status))
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(status));
+                Send(new {@event="update_status",status=doc.RootElement});
+            }
+            else Send(new {@event="update_status",status=new {ok=true,message="No update running."}});
+        }
+        catch(Exception ex) { Send(new {@event="error",error=ex.Message}); }
     }
 
     static void Update()
