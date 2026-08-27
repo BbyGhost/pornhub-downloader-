@@ -5,6 +5,7 @@
 
   let widget = null;
   let activeVideo = null;
+  let activeAnchor = null;
   let scanTimer = null;
   let menuOpen = false;
   const manifests = new Map();
@@ -72,8 +73,18 @@
     return score;
   }
 
+  function collectVideos(root, out = []) {
+    if (!root) return out;
+    try {
+      if (root.querySelectorAll) root.querySelectorAll("video").forEach(v => out.push(v));
+      const all = root.querySelectorAll ? root.querySelectorAll("*") : [];
+      for (const el of all) if (el.shadowRoot) collectVideos(el.shadowRoot, out);
+    } catch {}
+    return out;
+  }
+
   function findPrimaryVideo() {
-    const videos = Array.from(document.querySelectorAll("video"));
+    const videos = collectVideos(document);
     let best = null;
     let bestScore = -1;
     for (const video of videos) {
@@ -81,6 +92,24 @@
       if (score > bestScore) { bestScore = score; best = video; }
     }
     return best;
+  }
+
+  function findPlayerAnchor(video) {
+    if (video) {
+      let el = video;
+      for (let i = 0; i < 6 && el; i++, el = el.parentElement) {
+        const r = el.getBoundingClientRect?.();
+        if (r && r.width >= 300 && r.height >= 150) return el;
+      }
+    }
+    const selectors = [".video-js", ".jwplayer", ".plyr", ".vjs-tech", "[class*="player"]", "[id*="player"]"];
+    for (const selector of selectors) {
+      try {
+        const el = document.querySelector(selector), r = el?.getBoundingClientRect();
+        if (el && r && r.width >= 300 && r.height >= 150) return el;
+      } catch {}
+    }
+    return video || null;
   }
 
   function getSafeTitle(video) {
@@ -122,8 +151,10 @@
   }
 
   function positionWidget() {
-    if (!widget || !activeVideo) return;
-    const rect = activeVideo.getBoundingClientRect();
+    if (!widget) return;
+    const anchor = activeAnchor || activeVideo;
+    if (!anchor) { widget.container.style.display = "none"; return; }
+    const rect = anchor.getBoundingClientRect();
     const visible = rect.width >= 120 && rect.height >= 70 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
     if (!visible) { widget.container.style.display = "none"; return; }
     widget.container.style.display = "block";
@@ -164,7 +195,12 @@
   async function handleDownloadClick(event) {
     event.preventDefault();
     event.stopPropagation();
-    if (!activeVideo) return;
+    if (!activeVideo) {
+      showStatus("Video is still loading…", true);
+      setTimeout(() => showStatus("", false), 1800);
+      scan();
+      return;
+    }
     const source = getVideoSource(activeVideo);
     if (!source) { showStatus("Video source not ready", true); setTimeout(() => showStatus("", false), 1800); return; }
     if (source.type === "DIRECT") {
@@ -221,6 +257,7 @@
     const video = findPrimaryVideo();
     if (video !== activeVideo) {
       activeVideo = video;
+      activeAnchor = findPlayerAnchor(video);
       if (widget) {
         clearQualityMenu();
         widget.button.textContent = "↓  Download MP4";
@@ -228,7 +265,11 @@
         widget.button.style.opacity = "1";
       }
     }
-    if (!activeVideo) { if (widget) widget.container.style.display = "none"; return; }
+    if (!activeVideo && !activeAnchor) {
+      const fallback = findPlayerAnchor(null);
+      if (fallback) activeAnchor = fallback;
+    }
+    if (!activeVideo && !activeAnchor) { if (widget) widget.container.style.display = "none"; return; }
     createWidget();
     positionWidget();
   }
@@ -267,6 +308,6 @@
   }, true);
   window.addEventListener("scroll", positionWidget, { passive:true });
   window.addEventListener("resize", positionWidget, { passive:true });
-  setInterval(scan, 750);
+  setInterval(scan, 500);
   scan();
 })();
