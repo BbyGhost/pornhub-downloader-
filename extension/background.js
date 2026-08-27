@@ -1,47 +1,46 @@
 
 async function setVideoFlowIcon() {
   try {
-    const sizes=[16,32,48];
-    const imageData={};
+    const sizes = [16, 32, 48];
+    const imageData = {};
     for (const size of sizes) {
-      const canvas=new OffscreenCanvas(size,size);
-      const ctx=canvas.getContext("2d");
-      const s=size;
-      const r=s*0.22;
-      const g=ctx.createLinearGradient(0,0,s,s);
-      g.addColorStop(0,"#7c5cff"); g.addColorStop(1,"#18b6ff");
-      ctx.fillStyle=g;
+      const canvas = new OffscreenCanvas(size, size);
+      const ctx = canvas.getContext("2d");
+      const s = size;
+
+      // VideoFlow 3.2.8 test icon: clearly different pink/purple premium mark.
+      const g = ctx.createLinearGradient(0, 0, s, s);
+      g.addColorStop(0, "#8b5cf6");
+      g.addColorStop(0.55, "#ec4899");
+      g.addColorStop(1, "#06b6d4");
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.roundRect(1,1,s-2,s-2,r);
+      ctx.roundRect(1, 1, s - 2, s - 2, s * 0.23);
       ctx.fill();
 
-      ctx.fillStyle="rgba(255,255,255,.16)";
+      // White V mark.
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = Math.max(2, s * 0.13);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
       ctx.beginPath();
-      ctx.arc(s*.30,s*.24,s*.22,0,Math.PI*2);
-      ctx.fill();
-
-      ctx.fillStyle="#fff";
-      ctx.beginPath();
-      ctx.moveTo(s*.35,s*.27);
-      ctx.lineTo(s*.69,s*.50);
-      ctx.lineTo(s*.35,s*.73);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.strokeStyle="#fff";
-      ctx.lineWidth=Math.max(1.5,s*.09);
-      ctx.lineCap="round";
-      ctx.beginPath();
-      ctx.moveTo(s*.64,s*.72);
-      ctx.lineTo(s*.64,s*.87);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(s*.56,s*.79);
-      ctx.lineTo(s*.64,s*.87);
-      ctx.lineTo(s*.72,s*.79);
+      ctx.moveTo(s * 0.28, s * 0.27);
+      ctx.lineTo(s * 0.50, s * 0.72);
+      ctx.lineTo(s * 0.72, s * 0.27);
       ctx.stroke();
 
-      imageData[size]={imageData:ctx.getImageData(0,0,s,s)};
+      // Small download arrow badge.
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = Math.max(1.4, s * 0.075);
+      ctx.beginPath();
+      ctx.moveTo(s * 0.50, s * 0.55);
+      ctx.lineTo(s * 0.50, s * 0.86);
+      ctx.moveTo(s * 0.40, s * 0.76);
+      ctx.lineTo(s * 0.50, s * 0.86);
+      ctx.lineTo(s * 0.60, s * 0.76);
+      ctx.stroke();
+
+      imageData[size] = {imageData: ctx.getImageData(0, 0, s, s)};
     }
     await chrome.action.setIcon({imageData});
   } catch {}
