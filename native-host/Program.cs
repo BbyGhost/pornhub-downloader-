@@ -59,6 +59,7 @@ internal static class Program
         psi.ArgumentList.Add("-rw_timeout");psi.ArgumentList.Add("60000000");
         psi.ArgumentList.Add("-reconnect");psi.ArgumentList.Add("1");
         psi.ArgumentList.Add("-reconnect_streamed");psi.ArgumentList.Add("1");
+        psi.ArgumentList.Add("-reconnect_at_eof");psi.ArgumentList.Add("1");
         psi.ArgumentList.Add("-reconnect_on_network_error");psi.ArgumentList.Add("1");
         psi.ArgumentList.Add("-reconnect_delay_max");psi.ArgumentList.Add("10");
     }
@@ -68,7 +69,7 @@ internal static class Program
         try
         {
             var psi=new ProcessStartInfo{FileName=Ffmpeg(),UseShellExecute=false,RedirectStandardError=true,RedirectStandardOutput=true,CreateNoWindow=true};
-            psi.ArgumentList.Add("-hide_banner"); AddHeaders(psi,referer,origin,ua,cookie); psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url); psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:v?"); psi.ArgumentList.Add("-f");psi.ArgumentList.Add("null");psi.ArgumentList.Add("-");
+            psi.ArgumentList.Add("-hide_banner"); psi.ArgumentList.Add("-4"); AddHeaders(psi,referer,origin,ua,cookie); psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url); psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:v?"); psi.ArgumentList.Add("-f");psi.ArgumentList.Add("null");psi.ArgumentList.Add("-");
             using var p=Process.Start(psi)!; string err=p.StandardError.ReadToEnd(); p.WaitForExit();
             var list=new List<object>();
             foreach(var line in err.Split('\n'))
@@ -89,7 +90,7 @@ internal static class Program
             Directory.CreateDirectory(folder); string safe=Safe(filename); if(!safe.EndsWith(".mp4",StringComparison.OrdinalIgnoreCase))safe+=".mp4";
             string output=Path.Combine(folder,safe); int n=1; while(File.Exists(output))output=Path.Combine(folder,$"{Path.GetFileNameWithoutExtension(safe)} ({n++}).mp4");
             var psi=new ProcessStartInfo{FileName=Ffmpeg(),UseShellExecute=false,RedirectStandardError=true,RedirectStandardOutput=true,CreateNoWindow=true};
-            psi.ArgumentList.Add("-hide_banner");psi.ArgumentList.Add("-y");AddHeaders(psi,referer,origin,ua,cookie);psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:v:0?");psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:a:0?");psi.ArgumentList.Add("-c");psi.ArgumentList.Add("copy");psi.ArgumentList.Add("-movflags");psi.ArgumentList.Add("+faststart");psi.ArgumentList.Add(output);
+            psi.ArgumentList.Add("-hide_banner");psi.ArgumentList.Add("-4");psi.ArgumentList.Add("-y");AddHeaders(psi,referer,origin,ua,cookie);psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:v:0?");psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:a:0?");psi.ArgumentList.Add("-c");psi.ArgumentList.Add("copy");psi.ArgumentList.Add("-movflags");psi.ArgumentList.Add("+faststart");psi.ArgumentList.Add(output);
             using var p=Process.Start(psi)!; double duration=0; string last="";
             while(!p.StandardError.EndOfStream){string line=p.StandardError.ReadLine()??"";last=line;int di=line.IndexOf("Duration:",StringComparison.OrdinalIgnoreCase);if(di>=0)duration=Parse(line.Substring(di+9).Split(',')[0].Trim());int ti=line.IndexOf("time=",StringComparison.OrdinalIgnoreCase);if(ti>=0){double cur=Parse(line.Substring(ti+5).Split(' ')[0].Trim());double pct=duration>0?Math.Min(99,cur/duration*100):0;Send(new {@event="progress",progress=pct});}}
             p.WaitForExit(); if(p.ExitCode!=0)
