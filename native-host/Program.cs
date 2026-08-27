@@ -31,9 +31,11 @@ internal static class Program
                 string origin = Get(root,"origin");
                 string ua = Get(root,"userAgent");
                 string cookie = Get(root,"cookie");
+                int videoStream = -1;
+                if (root.TryGetProperty("videoStream", out var vs) && vs.ValueKind == JsonValueKind.Number) videoStream = vs.GetInt32();
 
                 if (action == "probe") Probe(url,referer,origin,ua,cookie);
-                else if (action == "download") Download(url,Get(root,"filename"),referer,origin,ua,cookie);
+                else if (action == "download") Download(url,Get(root,"filename"),referer,origin,ua,cookie,videoStream);
             }
         }
         catch(Exception ex) { Log(ex); Send(new {@event="error", error=ex.Message}); }
@@ -88,32 +90,37 @@ internal static class Program
             var list=new List<object>();
             foreach(var line in err.Split('\n'))
             {
-                var m=System.Text.RegularExpressions.Regex.Match(line,@"Stream #\d+:\d+.*Video:.*?(\d{2,5})x(\d{2,5})(?:.*?(\d+(?:\.\d+)?) fps)?");
-                if(m.Success && int.TryParse(m.Groups[2].Value,out int h)) list.Add(new {height=h,width=int.Parse(m.Groups[1].Value),fps=m.Groups[3].Success?m.Groups[3].Value:""});
+                var m=System.Text.RegularExpressions.Regex.Match(line,@"Stream #\d+:(\d+).*Video:.*?(\d{2,5})x(\d{2,5})(?:.*?(\d+(?:\.\d+)?) fps)?");
+                if(m.Success && int.TryParse(m.Groups[2].Value,out int h) && int.TryParse(m.Groups[1].Value,out int streamIndex)) list.Add(new {height=h,width=int.Parse(m.Groups[2].Value),fps=m.Groups[3].Success?m.Groups[3].Value:"",streamIndex});
             }
             Send(new {@event="probe",qualities=list});
         }
         catch(Exception ex){Send(new {@event="error",error=ex.Message});}
     }
 
-    static void Download(string url,string filename,string referer,string origin,string ua,string cookie)
+    static void Download(string url,string filename,string referer,string origin,string ua,string cookie,int videoStream)
     {
         try
         {
             string folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads","VideoFlow");
             Directory.CreateDirectory(folder); string safe=Safe(filename); if(!safe.EndsWith(".mp4",StringComparison.OrdinalIgnoreCase))safe+=".mp4";
             string output=Path.Combine(folder,safe); int n=1; while(File.Exists(output))output=Path.Combine(folder,$"{Path.GetFileNameWithoutExtension(safe)} ({n++}).mp4");
+            string temp=output+".part"; try { if(File.Exists(temp)) File.Delete(temp); } catch {}
             var psi=new ProcessStartInfo{FileName=Ffmpeg(),UseShellExecute=false,RedirectStandardError=true,RedirectStandardOutput=true,CreateNoWindow=true};
-            psi.ArgumentList.Add("-hide_banner");AddNetworkFamily(psi,url);psi.ArgumentList.Add("-y");AddHeaders(psi,referer,origin,ua,cookie);psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:v:0?");psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:a:0?");psi.ArgumentList.Add("-c");psi.ArgumentList.Add("copy");psi.ArgumentList.Add("-movflags");psi.ArgumentList.Add("+faststart");psi.ArgumentList.Add(output);
+            psi.ArgumentList.Add("-hide_banner");AddNetworkFamily(psi,url);psi.ArgumentList.Add("-y");AddHeaders(psi,referer,origin,ua,cookie);psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);psi.ArgumentList.Add("-map");psi.ArgumentList.Add(videoStream >= 0 ? $"0:{videoStream}" : "0:v:0?");psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:a:0?");psi.ArgumentList.Add("-c");psi.ArgumentList.Add("copy");psi.ArgumentList.Add("-movflags");psi.ArgumentList.Add("+faststart");psi.ArgumentList.Add(temp);
             using var p=Process.Start(psi)!; double duration=0; string last="";
-            while(!p.StandardError.EndOfStream){string line=p.StandardError.ReadLine()??"";last=line;int di=line.IndexOf("Duration:",StringComparison.OrdinalIgnoreCase);if(di>=0)duration=Parse(line.Substring(di+9).Split(',')[0].Trim());int ti=line.IndexOf("time=",StringComparison.OrdinalIgnoreCase);if(ti>=0){double cur=Parse(line.Substring(ti+5).Split(' ')[0].Trim());double pct=duration>0?Math.Min(99,cur/duration*100):0;Send(new {@event="progress",progress=pct});}}
+            while(!p.StandardError.EndOfStream){string line=p.StandardError.ReadLine()??"";last=line;int di=line.IndexOf("Duration:",StringComparison.OrdinalIgnoreCase);if(di>=0)duration=Parse(line.Substring(di+9).Split(',')[0].Trim());int ti=line.IndexOf("time=",StringComparison.OrdinalIgnoreCase);if(ti>=0){double cur=Parse(line.Substring(ti+5).Split(' ')[0].Trim());double pct=duration>0?Math.Min(99,cur/duration*100):0;string speed="";int si=line.IndexOf("speed=",StringComparison.OrdinalIgnoreCase);if(si>=0)speed=line.Substring(si+6).Split(' ')[0].Trim();Send(new {@event="progress",progress=pct,speed});}}
             p.WaitForExit(); if(p.ExitCode!=0)
             {
+                try { if(File.Exists(temp)) File.Delete(temp); } catch {}
                 string detail=last;
                 if(detail.Contains("-138",StringComparison.OrdinalIgnoreCase) || detail.Contains("timed out",StringComparison.OrdinalIgnoreCase))
                     detail="Connection to the video server timed out. The site may require a fresh session or the CDN may be temporarily unavailable.";
                 throw new Exception("FFmpeg failed: "+detail);
-            } if(!File.Exists(output)||new FileInfo(output).Length==0)throw new Exception("Output file was not created."); Send(new {@event="complete",path=output,progress=100});
+            } if(!File.Exists(temp)||new FileInfo(temp).Length==0)throw new Exception("Output file was not created.");
+            if(File.Exists(output)) File.Delete(output);
+            File.Move(temp,output);
+            Send(new {@event="complete",path=output,progress=100});
         }
         catch(Exception ex){Log(ex);Send(new {@event="error",error=ex.Message});}
     }
