@@ -1,3 +1,28 @@
+const UPDATE_URL = "https://raw.githubusercontent.com/BbyGhost/pornhub-downloader-/main/update.json";
+const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+async function checkForUpdates(manual = false) {
+  try {
+    const r = await fetch(UPDATE_URL, {cache:"no-store"});
+    if (!r.ok) throw new Error("Update server returned " + r.status);
+    const info = await r.json();
+    const current = chrome.runtime.getManifest().version;
+    const newer = info.version && info.version !== current;
+    if (newer) {
+      await chrome.storage.local.set({vfUpdate: info});
+      if (manual) return {ok:true, update:true, info};
+      return {ok:true, update:true, info};
+    }
+    return {ok:true, update:false, version:current};
+  } catch(e) {
+    return {ok:false,error:e.message};
+  }
+}
+
+chrome.runtime.onInstalled.addListener(() => checkForUpdates(false));
+chrome.alarms?.create?.("vf-update-check", {periodInMinutes:360});
+chrome.alarms?.onAlarm?.addListener(a => { if(a.name === "vf-update-check") checkForUpdates(false); });
+
 const HOST = "com.videoflow.fresh";
 
 async function getCookieHeader(url) {
@@ -47,7 +72,7 @@ async function nativeRequest(message, tabId) {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg?.type === "vf-probe") {
+  if (msg?.type === "vf-check-update") { checkForUpdates(true).then(sendResponse); return true; }\n\n  if (msg?.type === "vf-get-update") { chrome.storage.local.get("vfUpdate").then(x => sendResponse({ok:true,info:x.vfUpdate||null})); return true; }\n\n  if (msg?.type === "vf-probe") {
     (async () => {
       const cookie = await getCookieHeader(msg.url);
       return nativeRequest({
