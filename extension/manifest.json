@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VideoFlow Downloader",
-  "version": "3.2.8",
+  "version": "3.2.9",
   "description": "One-click MP4 downloader with quality selection, FFmpeg progress, premium toolbar icon and automatic updates.",
   "permissions": [
     "nativeMessaging",
@@ -32,7 +32,12 @@
   },
   "action": {
     "default_title": "VideoFlow Downloader",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
   },
   "content_scripts": [
     {
@@ -86,5 +91,11 @@
         "https://sxyprn.com/*"
       ]
     }
-  ]
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
 }
