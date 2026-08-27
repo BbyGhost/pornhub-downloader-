@@ -1,8 +1,10 @@
 {
-  "version": "3.2.4",
+  "version": "3.2.5",
   "released": "2026-08-28",
   "notes": [
-    "Automatic GitHub update checking enabled"
+    "Built-in one-click updater",
+    "Updates extension and FFmpeg native bridge",
+    "Automatic update checks"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
