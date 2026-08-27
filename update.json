@@ -1,10 +1,10 @@
 {
-  "version": "3.2.7",
+  "version": "3.2.8",
   "released": "2026-08-28",
   "notes": [
-    "Fix automatic updater native-host disconnect",
-    "Premium toolbar icon",
-    "Quality selection and FFmpeg progress"
+    "TEST: new VideoFlow toolbar icon",
+    "Automatic updater test",
+    "No downloader behavior changes"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
