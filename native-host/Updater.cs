@@ -1,0 +1,146 @@
+using System.IO.Compression;
+using System.Net.Http;
+using System.Text.Json;
+
+internal static class Program
+{
+    const string UpdateManifestUrl = "https://raw.githubusercontent.com/BbyGhost/pornhub-downloader-/main/update.json";
+    const string PackageUrl = "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip";
+
+    static async Task<int> Main(string[] args)
+    {
+        if (args.Length < 1) return 2;
+        string root = Path.GetFullPath(args[0]);
+        int parentPid = args.Length > 1 && int.TryParse(args[1], out var p) ? p : 0;
+        string extensionId = args.Length > 2 ? args[2] : "";
+
+        try
+        {
+            if (parentPid > 0) {
+                try { using var parent = System.Diagnostics.Process.GetProcessById(parentPid); await parent.WaitForExitAsync(); }
+                catch {}
+                await Task.Delay(1200);
+            }
+
+            string ext = Path.Combine(root, "extension");
+            string manifestPath = Path.Combine(ext, "manifest.json");
+            if (!File.Exists(manifestPath)) throw new Exception("VideoFlow extension folder was not found.");
+
+            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("VideoFlow-Updater/1.0");
+
+            var remote = JsonSerializer.Deserialize<UpdateInfo>(await http.GetStringAsync(UpdateManifestUrl))
+                ?? throw new Exception("Invalid update manifest.");
+            var local = JsonSerializer.Deserialize<Manifest>(await File.ReadAllTextAsync(manifestPath))
+                ?? throw new Exception("Invalid local extension manifest.");
+
+            if (!Newer(remote.version, local.version))
+            {
+                WriteStatus(root, true, "Already up to date.", local.version, local.version);
+                return 0;
+            }
+
+            if (string.IsNullOrWhiteSpace(extensionId))
+            {
+                string cfg = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VideoFlowNative", "install-config.json");
+                if (File.Exists(cfg))
+                {
+                    var c = JsonSerializer.Deserialize<InstallConfig>(await File.ReadAllTextAsync(cfg));
+                    extensionId = c?.extensionId ?? "";
+                }
+            }
+
+            string tmp = Path.Combine(Path.GetTempPath(), "VideoFlowUpdate-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tmp);
+            try
+            {
+                string zip = Path.Combine(tmp, "update.zip");
+                await File.WriteAllBytesAsync(zip, await http.GetByteArrayAsync(PackageUrl));
+                ZipFile.ExtractToDirectory(zip, tmp);
+                string? top = Directory.GetDirectories(tmp).FirstOrDefault(d => Directory.Exists(Path.Combine(d, "extension")));
+                if (top == null) throw new Exception("GitHub package is missing the extension folder.");
+
+                string backup = root.TrimEnd(Path.DirectorySeparatorChar) + ".backup-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                Directory.CreateDirectory(backup);
+                Directory.Move(ext, Path.Combine(backup, "extension"));
+
+                try
+                {
+                    CopyDirectory(Path.Combine(top, "extension"), ext);
+                }
+                catch
+                {
+                    if (Directory.Exists(ext)) Directory.Delete(ext, true);
+                    Directory.Move(Path.Combine(backup, "extension"), ext);
+                    throw;
+                }
+
+                string install = Path.Combine(top, "native-host", "install.ps1");
+                if (File.Exists(install) && !string.IsNullOrWhiteSpace(extensionId))
+                {
+                    var psi = new System.Diagnostics.ProcessStartInfo("powershell.exe")
+                    {
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        WorkingDirectory = Path.GetDirectoryName(install)!
+                    };
+                    psi.ArgumentList.Add("-NoProfile");
+                    psi.ArgumentList.Add("-ExecutionPolicy"); psi.ArgumentList.Add("Bypass");
+                    psi.ArgumentList.Add("-File"); psi.ArgumentList.Add(install);
+                    psi.ArgumentList.Add("-ExtensionId"); psi.ArgumentList.Add(extensionId);
+                    psi.ArgumentList.Add("-InstallRoot"); psi.ArgumentList.Add(root);
+                    psi.ArgumentList.Add("-AutoUpdate");
+
+                    using var installer = System.Diagnostics.Process.Start(psi)
+                        ?? throw new Exception("Could not start the native bridge installer.");
+                    await installer.WaitForExitAsync();
+                    if (installer.ExitCode != 0)
+                        throw new Exception("Native bridge update failed. Code: " + installer.ExitCode);
+                }
+
+                WriteStatus(root, true, "Updated successfully.", local.version, remote.version);
+                return 0;
+            }
+            finally
+            {
+                try { Directory.Delete(tmp, true); } catch {}
+            }
+        }
+        catch (Exception ex)
+        {
+            WriteStatus(root, false, ex.Message, "", "");
+            return 1;
+        }
+    }
+
+    static bool Newer(string a, string b)
+    {
+        if (Version.TryParse(a.TrimStart('v','V'), out var av) &&
+            Version.TryParse(b.TrimStart('v','V'), out var bv))
+            return av > bv;
+        return !string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    static void CopyDirectory(string src, string dst)
+    {
+        Directory.CreateDirectory(dst);
+        foreach (var file in Directory.GetFiles(src))
+            File.Copy(file, Path.Combine(dst, Path.GetFileName(file)), true);
+        foreach (var dir in Directory.GetDirectories(src))
+            CopyDirectory(dir, Path.Combine(dst, Path.GetFileName(dir)));
+    }
+
+    static void WriteStatus(string root, bool ok, string message, string from, string to)
+    {
+        try
+        {
+            File.WriteAllText(Path.Combine(root, ".videoflow-update.json"),
+                JsonSerializer.Serialize(new { ok, message, fromVersion = from, toVersion = to, at = DateTimeOffset.Now }));
+        }
+        catch {}
+    }
+
+    sealed class UpdateInfo { public string version { get; set; } = ""; }
+    sealed class Manifest { public string version { get; set; } = ""; }
+    sealed class InstallConfig { public string extensionId { get; set; } = ""; }
+}
