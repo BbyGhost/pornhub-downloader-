@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "VideoFlow Downloader",
-  "version": "3.2.3",
-  "description": "One-click MP4 downloader with always-visible player button, quality selection and FFmpeg progress.",
+  "version": "3.2.4",
+  "description": "One-click MP4 downloader with quality selection, FFmpeg progress and automatic update checking.",
   "permissions": [
     "nativeMessaging",
     "cookies",
-    "storage"
+    "storage",
+    "alarms"
   ],
   "host_permissions": [
     "https://www.xvideos.com/*",
