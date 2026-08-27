@@ -127,9 +127,7 @@ internal static class Program
             }
             catch {}
 
-            // Remove duplicate resolutions while preserving the best stream for each height.
-            var unique=list.Cast<dynamic>().GroupBy(x => (int)x.height).Select(g => g.OrderByDescending(x => (int)x.width).First()).OrderByDescending(x => (int)x.height).ToList();
-            Send(new {@event="probe",qualities=unique});
+            Send(new {@event="probe",qualities=list});
         }
         catch(Exception ex){Send(new {@event="probe",qualities=new List<object>()});}
     }
