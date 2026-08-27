@@ -180,9 +180,15 @@ internal static class Program
                 Send(new {@event="error",error="VideoFlow updater is not installed. Run install.ps1 once to install it."});
                 return;
             }
+
+            // Run a temporary copy so the updater can replace the installed
+            // native bridge and updater files without a locked executable.
+            string tempUpdater = Path.Combine(Path.GetTempPath(), "VideoFlowUpdater-" + Guid.NewGuid().ToString("N") + ".exe");
+            File.Copy(updater, tempUpdater, true);
+
             var psi = new ProcessStartInfo
             {
-                FileName = updater,
+                FileName = tempUpdater,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
