@@ -1,10 +1,10 @@
 {
-  "version": "3.2.5",
+  "version": "3.2.6",
   "released": "2026-08-28",
   "notes": [
-    "Built-in one-click updater",
-    "Updates extension and FFmpeg native bridge",
-    "Automatic update checks"
+    "Premium VideoFlow toolbar icon",
+    "Faster quality detection with ffprobe",
+    "Built-in one-click updater"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
