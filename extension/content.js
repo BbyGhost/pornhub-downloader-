@@ -8,6 +8,7 @@
   let scanTimer = null;
   let menuOpen = false;
   const manifests = new Map();
+  const masterManifests = new Map();
 
   function normalizeUrl(value) {
     try {
@@ -28,7 +29,9 @@
     const lower = normalized.toLowerCase();
     const type = String(mime).toLowerCase();
     if (!lower.includes(".m3u8") && !lower.includes(".mpd") && !type.includes("mpegurl") && !type.includes("dash")) return;
-    manifests.set(normalized, { url: normalized, time: Date.now(), type: lower.includes(".mpd") ? "DASH" : "HLS" });
+    const entry = { url: normalized, time: Date.now(), type: lower.includes(".mpd") ? "DASH" : "HLS" };
+    manifests.set(normalized, entry);
+    if (lower.includes("master.m3u8") || lower.includes(".urlset/") || /[\\/]master[._-]/i.test(lower)) masterManifests.set(normalized, entry);
     if (manifests.size > 20) {
       const entries = [...manifests.entries()].sort((a,b) => a[1].time - b[1].time);
       manifests.delete(entries[0][0]);
@@ -47,6 +50,8 @@
   function getVideoSource(video) {
     const direct = getDirectVideoSource(video);
     if (direct) return direct;
+    const recentMaster = [...masterManifests.values()].sort((a,b) => b.time - a.time)[0];
+    if (recentMaster) return { url: recentMaster.url, type: recentMaster.type };
     const recent = [...manifests.values()].sort((a,b) => b.time - a.time)[0];
     return recent ? { url: recent.url, type: recent.type } : null;
   }
