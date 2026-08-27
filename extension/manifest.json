@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VideoFlow Downloader",
-  "version": "3.2.6",
+  "version": "3.2.7",
   "description": "One-click MP4 downloader with quality selection, FFmpeg progress, premium toolbar icon and automatic updates.",
   "permissions": [
     "nativeMessaging",
