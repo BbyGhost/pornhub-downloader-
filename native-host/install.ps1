@@ -74,10 +74,12 @@ $key="HKCU:\Software\Google\Chrome\NativeMessagingHosts\$HostName"
 New-Item $key -Force | Out-Null
 Set-ItemProperty $key -Name "(default)" -Value $Manifest
 
+$installedVersion=""
+try { $installedVersion=(Get-Content (Join-Path $InstallRoot "extension\manifest.json") -Raw | ConvertFrom-Json).version } catch { $installedVersion="" }
 @{
   extensionId=$ExtensionId
   installRoot=$InstallRoot
-  installedVersion=(try { (Get-Content (Join-Path $InstallRoot "extension\manifest.json") -Raw | ConvertFrom-Json).version } catch { "" })
+  installedVersion=$installedVersion
   installedAt=(Get-Date).ToString("o")
 } | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $InstallDir "install-config.json")
 
