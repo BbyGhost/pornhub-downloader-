@@ -74,7 +74,17 @@ async function nativeRequest(message, tabId) {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.type === "vf-check-update") { checkForUpdates(true).then(sendResponse); return true; }
 
-  if (msg?.type === "vf-get-update") { chrome.storage.local.get("vfUpdate").then(x => sendResponse({ok:true,info:x.vfUpdate||null})); return true; }
+  if (msg?.type === "vf-get-update") {
+    chrome.storage.local.get("vfUpdate").then(x => sendResponse({ok:true,info:x.vfUpdate||null}));
+    return true;
+  }
+
+  if (msg?.type === "vf-update-now") {
+    nativeRequest({action:"update"}, sender.tab?.id)
+      .then(r => sendResponse({ok:true,result:r}))
+      .catch(e => sendResponse({ok:false,error:e.message}));
+    return true;
+  }
 
   if (msg?.type === "vf-probe") {
     (async () => {
