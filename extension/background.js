@@ -72,7 +72,11 @@ async function nativeRequest(message, tabId) {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg?.type === "vf-check-update") { checkForUpdates(true).then(sendResponse); return true; }\n\n  if (msg?.type === "vf-get-update") { chrome.storage.local.get("vfUpdate").then(x => sendResponse({ok:true,info:x.vfUpdate||null})); return true; }\n\n  if (msg?.type === "vf-probe") {
+  if (msg?.type === "vf-check-update") { checkForUpdates(true).then(sendResponse); return true; }
+
+  if (msg?.type === "vf-get-update") { chrome.storage.local.get("vfUpdate").then(x => sendResponse({ok:true,info:x.vfUpdate||null})); return true; }
+
+  if (msg?.type === "vf-probe") {
     (async () => {
       const cookie = await getCookieHeader(msg.url);
       return nativeRequest({
