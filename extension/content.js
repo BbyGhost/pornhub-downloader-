@@ -58,13 +58,16 @@
 
   function getVideoScore(video) {
     const rect = video.getBoundingClientRect();
-    if (rect.width < 180 || rect.height < 100 || rect.bottom <= 0 || rect.top >= window.innerHeight || rect.right <= 0 || rect.left >= window.innerWidth) return -1;
+    if (rect.width < 120 || rect.height < 70 || rect.bottom <= 0 || rect.top >= window.innerHeight || rect.right <= 0 || rect.left >= window.innerWidth) return -1;
     const area = rect.width * rect.height;
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
     const distance = Math.abs(centerX - window.innerWidth / 2) + Math.abs(centerY - window.innerHeight / 2);
     let score = area - distance * 250;
     if (!video.paused) score += area * 2;
+    if (video.controls) score += 250000;
+    if (video.readyState >= 2) score += 150000;
+    if (video.currentSrc || video.src) score += 100000;
     if (video.videoWidth > 0 && video.videoHeight > 0) score += 500000;
     return score;
   }
@@ -121,7 +124,7 @@
   function positionWidget() {
     if (!widget || !activeVideo) return;
     const rect = activeVideo.getBoundingClientRect();
-    const visible = rect.width >= 180 && rect.height >= 100 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
+    const visible = rect.width >= 120 && rect.height >= 70 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
     if (!visible) { widget.container.style.display = "none"; return; }
     widget.container.style.display = "block";
     const width = 190, height = 42;
@@ -250,10 +253,20 @@
     (document.documentElement || document.head || document.body).appendChild(hook);
   } catch (error) { console.warn("VideoFlow page hook failed:", error); }
 
-  const observer = new MutationObserver(() => { clearTimeout(scanTimer); scanTimer = setTimeout(scan, 150); });
+  const observer = new MutationObserver(() => { clearTimeout(scanTimer); scanTimer = setTimeout(scan, 100); });
   observer.observe(document.documentElement, { childList:true, subtree:true });
+
+  document.addEventListener("play", event => {
+    if (event.target instanceof HTMLVideoElement) { activeVideo = event.target; scan(); }
+  }, true);
+  document.addEventListener("loadedmetadata", event => {
+    if (event.target instanceof HTMLVideoElement) scan();
+  }, true);
+  document.addEventListener("canplay", event => {
+    if (event.target instanceof HTMLVideoElement) scan();
+  }, true);
   window.addEventListener("scroll", positionWidget, { passive:true });
   window.addEventListener("resize", positionWidget, { passive:true });
-  setInterval(scan, 1500);
+  setInterval(scan, 750);
   scan();
 })();
