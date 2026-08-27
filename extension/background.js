@@ -79,6 +79,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg?.type === "vf-update-status") {
+    nativeRequest({action:"update-status"}, sender.tab?.id)
+      .then(r => sendResponse({ok:true,result:r}))
+      .catch(e => sendResponse({ok:false,error:e.message}));
+    return true;
+  }
+
   if (msg?.type === "vf-update-now") {
     nativeRequest({action:"update"}, sender.tab?.id)
       .then(r => sendResponse({ok:true,result:r}))
