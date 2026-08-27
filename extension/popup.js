@@ -19,6 +19,6 @@ async function update(){
   const r=await chrome.runtime.sendMessage({type:"vf-update-now"});
   if(!r?.ok){setStatus(r?.error||"Update could not be started.","err");btn.disabled=false;btn.textContent="Try again";btn.onclick=check;return;}
   setStatus("Update started. Chrome will reload VideoFlow shortly.","ok");
-  setTimeout(()=>chrome.runtime.reload(),7000);
+  setTimeout(()=>chrome.runtime.reload(),15000);
 }
 btn.onclick=check; check();
