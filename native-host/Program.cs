@@ -105,9 +105,9 @@ internal static class Program
             string folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads","VideoFlow");
             Directory.CreateDirectory(folder); string safe=Safe(filename); if(!safe.EndsWith(".mp4",StringComparison.OrdinalIgnoreCase))safe+=".mp4";
             string output=Path.Combine(folder,safe); int n=1; while(File.Exists(output))output=Path.Combine(folder,$"{Path.GetFileNameWithoutExtension(safe)} ({n++}).mp4");
-            string temp=output+".part"; try { if(File.Exists(temp)) File.Delete(temp); } catch {}
+            string temp=output+".part.mp4"; try { if(File.Exists(temp)) File.Delete(temp); } catch {}
             var psi=new ProcessStartInfo{FileName=Ffmpeg(),UseShellExecute=false,RedirectStandardError=true,RedirectStandardOutput=true,CreateNoWindow=true};
-            psi.ArgumentList.Add("-hide_banner");AddNetworkFamily(psi,url);psi.ArgumentList.Add("-y");AddHeaders(psi,referer,origin,ua,cookie);psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);psi.ArgumentList.Add("-map");psi.ArgumentList.Add(videoStream >= 0 ? $"0:{videoStream}" : "0:v:0?");psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:a:0?");psi.ArgumentList.Add("-c");psi.ArgumentList.Add("copy");psi.ArgumentList.Add("-movflags");psi.ArgumentList.Add("+faststart");psi.ArgumentList.Add(temp);
+            psi.ArgumentList.Add("-hide_banner");AddNetworkFamily(psi,url);psi.ArgumentList.Add("-y");AddHeaders(psi,referer,origin,ua,cookie);psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);psi.ArgumentList.Add("-map");psi.ArgumentList.Add(videoStream >= 0 ? $"0:{videoStream}" : "0:v:0?");psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:a:0?");psi.ArgumentList.Add("-c");psi.ArgumentList.Add("copy");psi.ArgumentList.Add("-movflags");psi.ArgumentList.Add("+faststart");psi.ArgumentList.Add("-f");psi.ArgumentList.Add("mp4");psi.ArgumentList.Add(temp);
             using var p=Process.Start(psi)!; double duration=0; string last="";
             while(!p.StandardError.EndOfStream){string line=p.StandardError.ReadLine()??"";last=line;int di=line.IndexOf("Duration:",StringComparison.OrdinalIgnoreCase);if(di>=0)duration=Parse(line.Substring(di+9).Split(',')[0].Trim());int ti=line.IndexOf("time=",StringComparison.OrdinalIgnoreCase);if(ti>=0){double cur=Parse(line.Substring(ti+5).Split(' ')[0].Trim());double pct=duration>0?Math.Min(99,cur/duration*100):0;string speed="";int si=line.IndexOf("speed=",StringComparison.OrdinalIgnoreCase);if(si>=0)speed=line.Substring(si+6).Split(' ')[0].Trim();Send(new {@event="progress",progress=pct,speed});}}
             p.WaitForExit(); if(p.ExitCode!=0)
@@ -125,7 +125,7 @@ internal static class Program
         catch(Exception ex){Log(ex);Send(new {@event="error",error=ex.Message});}
     }
 
-    static string Safe(string s){if(string.IsNullOrWhiteSpace(s))return"video.mp4";foreach(char c in Path.GetInvalidFileNameChars())s=s.Replace(c,' ');return s.Trim();}
+    static string Safe(string s){if(string.IsNullOrWhiteSpace(s))return"video";foreach(char c in Path.GetInvalidFileNameChars())s=s.Replace(c,' ');s=s.Trim().TrimEnd('.',' ');if(string.IsNullOrWhiteSpace(s))return"video";string u=s.Trim().TrimEnd('.',' ').ToUpperInvariant();string[] reserved={"CON","PRN","AUX","NUL","COM1","COM2","COM3","COM4","COM5","COM6","COM7","COM8","COM9","LPT1","LPT2","LPT3","LPT4","LPT5","LPT6","LPT7","LPT8","LPT9"};if(Array.Exists(reserved,x=>x==u||u.StartsWith(x+".")))s="_"+s;return s;}
     static double Parse(string s)=>TimeSpan.TryParse(s,out var t)?t.TotalSeconds:0;
     static byte[]? ReadExact(Stream s,int n){byte[] b=new byte[n];int o=0;while(o<n){int g=s.Read(b,o,n-o);if(g<=0)return null;o+=g;}return b;}
     static void Send(object o){byte[] b=Encoding.UTF8.GetBytes(JsonSerializer.Serialize(o));lock(LockObj){var s=Console.OpenStandardOutput();s.Write(BitConverter.GetBytes(b.Length),0,4);s.Write(b,0,b.Length);s.Flush();}}
