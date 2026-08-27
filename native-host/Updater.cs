@@ -14,6 +14,7 @@ internal static class Program
         int parentPid = args.Length > 1 && int.TryParse(args[1], out var p) ? p : 0;
         string extensionId = args.Length > 2 ? args[2] : "";
 
+        string backupPath = "";
         try
         {
             if (parentPid > 0) {
@@ -64,8 +65,9 @@ internal static class Program
                 if (top == null) throw new Exception("GitHub package is missing the extension folder.");
 
                 string backup = root.TrimEnd(Path.DirectorySeparatorChar) + ".backup-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                backupPath = Path.Combine(backup, "extension");
                 Directory.CreateDirectory(backup);
-                Directory.Move(ext, Path.Combine(backup, "extension"));
+                Directory.Move(ext, backupPath);
 
                 try
                 {
@@ -74,7 +76,7 @@ internal static class Program
                 catch
                 {
                     if (Directory.Exists(ext)) Directory.Delete(ext, true);
-                    Directory.Move(Path.Combine(backup, "extension"), ext);
+                    Directory.Move(backupPath, ext);
                     throw;
                 }
 
@@ -112,6 +114,16 @@ internal static class Program
         }
         catch (Exception ex)
         {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(backupPath) && Directory.Exists(backupPath))
+                {
+                    string ext = Path.Combine(root, "extension");
+                    if (Directory.Exists(ext)) Directory.Delete(ext, true);
+                    Directory.Move(backupPath, ext);
+                }
+            }
+            catch {}
             WriteStatus(root, false, ex.Message, "", "");
             ScheduleSelfDelete();
             return 1;
