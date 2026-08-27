@@ -108,7 +108,8 @@ async function nativeRequest(message, tabId) {
           type: "vf-progress", jobId: message.jobId,
           progress: Number(msg.progress || 0), speed: msg.speed || ""
         }).catch(() => {});
-      } else if (msg?.event === "complete") finish(true, msg);
+      } else if (msg?.event === "update_started") finish(true, msg);
+      else if (msg?.event === "complete") finish(true, msg);
       else if (msg?.event === "probe") finish(true, msg);
       else if (msg?.event === "error") finish(false, new Error(msg.error || "Native bridge error"));
     });
