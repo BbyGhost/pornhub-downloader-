@@ -151,7 +151,7 @@
       Object.assign(item.style, { display:"block", width:"100%", padding:"9px 10px", margin:"2px 0", border:"0", borderRadius:"8px", background:"transparent", color:"#eef1f6", fontSize:"11px", fontWeight:"700", textAlign:"left", cursor:"pointer" });
       item.addEventListener("mouseenter", () => { item.style.background = "#202631"; });
       item.addEventListener("mouseleave", () => { item.style.background = "transparent"; });
-      item.addEventListener("click", async event => { event.preventDefault(); event.stopPropagation(); menuOpen = false; widget.menu.style.display = "none"; await startDownload(quality.url || fallbackSource.url, height); });
+      item.addEventListener("click", async event => { event.preventDefault(); event.stopPropagation(); menuOpen = false; widget.menu.style.display = "none"; await startDownload(quality.url || fallbackSource.url, height, Number.isInteger(Number(quality.streamIndex)) ? Number(quality.streamIndex) : null); });
       widget.menu.appendChild(item);
     }
     menuOpen = true;
@@ -165,7 +165,7 @@
     const source = getVideoSource(activeVideo);
     if (!source) { showStatus("Video source not ready", true); setTimeout(() => showStatus("", false), 1800); return; }
     if (source.type === "DIRECT") {
-      showQualityMenu([{ height: activeVideo.videoHeight || 0, width: activeVideo.videoWidth || 0, url: source.url }], source);
+      showQualityMenu([{ height: activeVideo.videoHeight || 0, width: activeVideo.videoWidth || 0, streamIndex: 0, url: source.url }], source);
       return;
     }
     widget.button.disabled = true;
@@ -185,7 +185,7 @@
     }
   }
 
-  async function startDownload(url, height) {
+  async function startDownload(url, height, videoStream = null) {
     if (!activeVideo || !widget) return;
     widget.button.disabled = true;
     widget.button.style.opacity = "0.7";
@@ -199,7 +199,7 @@
     filename += ".mp4";
 
     try {
-      const response = await chrome.runtime.sendMessage({ type:"vf-download", job:{ jobId, url, filename, referer:location.href, origin:location.origin, userAgent:navigator.userAgent } });
+      const response = await chrome.runtime.sendMessage({ type:"vf-download", job:{ jobId, url, filename, referer:location.href, origin:location.origin, userAgent:navigator.userAgent, videoStream } });
       if (!response?.ok) throw new Error(response?.error || "Download failed");
       widget.progressInner.style.width = "100%";
       widget.button.textContent = "✓  Downloaded";
