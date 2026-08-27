@@ -1,3 +1,55 @@
+
+async function setVideoFlowIcon() {
+  try {
+    const sizes=[16,32,48];
+    const imageData={};
+    for (const size of sizes) {
+      const canvas=new OffscreenCanvas(size,size);
+      const ctx=canvas.getContext("2d");
+      const s=size;
+      const r=s*0.22;
+      const g=ctx.createLinearGradient(0,0,s,s);
+      g.addColorStop(0,"#7c5cff"); g.addColorStop(1,"#18b6ff");
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      ctx.roundRect(1,1,s-2,s-2,r);
+      ctx.fill();
+
+      ctx.fillStyle="rgba(255,255,255,.16)";
+      ctx.beginPath();
+      ctx.arc(s*.30,s*.24,s*.22,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle="#fff";
+      ctx.beginPath();
+      ctx.moveTo(s*.35,s*.27);
+      ctx.lineTo(s*.69,s*.50);
+      ctx.lineTo(s*.35,s*.73);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle="#fff";
+      ctx.lineWidth=Math.max(1.5,s*.09);
+      ctx.lineCap="round";
+      ctx.beginPath();
+      ctx.moveTo(s*.64,s*.72);
+      ctx.lineTo(s*.64,s*.87);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s*.56,s*.79);
+      ctx.lineTo(s*.64,s*.87);
+      ctx.lineTo(s*.72,s*.79);
+      ctx.stroke();
+
+      imageData[size]={imageData:ctx.getImageData(0,0,s,s)};
+    }
+    await chrome.action.setIcon({imageData});
+  } catch {}
+}
+setVideoFlowIcon();
+chrome.runtime.onInstalled.addListener(setVideoFlowIcon);
+chrome.runtime.onStartup.addListener(setVideoFlowIcon);
+
 const UPDATE_URL = "https://raw.githubusercontent.com/BbyGhost/pornhub-downloader-/main/update.json";
 const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
