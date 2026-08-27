@@ -29,11 +29,13 @@ internal static class Program
             using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("VideoFlow-Updater/1.0");
 
+            WriteStatus(root, true, "Checking for update…", "", "");
             var remote = JsonSerializer.Deserialize<UpdateInfo>(await http.GetStringAsync(UpdateManifestUrl))
                 ?? throw new Exception("Invalid update manifest.");
             var local = JsonSerializer.Deserialize<Manifest>(await File.ReadAllTextAsync(manifestPath))
                 ?? throw new Exception("Invalid local extension manifest.");
 
+            WriteStatus(root, true, "Downloading update…", local.version, remote.version);
             if (!Newer(remote.version, local.version))
             {
                 WriteStatus(root, true, "Already up to date.", local.version, local.version);
@@ -50,6 +52,7 @@ internal static class Program
                 }
             }
 
+            WriteStatus(root, true, "Installing update…", local.version, remote.version);
             string tmp = Path.Combine(Path.GetTempPath(), "VideoFlowUpdate-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(tmp);
             try
