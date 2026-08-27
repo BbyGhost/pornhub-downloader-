@@ -91,7 +91,7 @@ internal static class Program
             foreach(var line in err.Split('\n'))
             {
                 var m=System.Text.RegularExpressions.Regex.Match(line,@"Stream #\d+:(\d+).*Video:.*?(\d{2,5})x(\d{2,5})(?:.*?(\d+(?:\.\d+)?) fps)?");
-                if(m.Success && int.TryParse(m.Groups[2].Value,out int h) && int.TryParse(m.Groups[1].Value,out int streamIndex)) list.Add(new {height=h,width=int.Parse(m.Groups[2].Value),fps=m.Groups[3].Success?m.Groups[3].Value:"",streamIndex});
+                if(m.Success && int.TryParse(m.Groups[3].Value,out int h) && int.TryParse(m.Groups[1].Value,out int streamIndex)) list.Add(new {height=h,width=int.Parse(m.Groups[2].Value),fps=m.Groups[4].Success?m.Groups[4].Value:"",streamIndex});
             }
             Send(new {@event="probe",qualities=list});
         }
