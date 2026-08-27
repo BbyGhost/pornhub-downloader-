@@ -36,6 +36,7 @@ internal static class Program
 
                 if (action == "probe") Probe(url,referer,origin,ua,cookie);
                 else if (action == "download") Download(url,Get(root,"filename"),referer,origin,ua,cookie,videoStream);
+                else if (action == "update") { Update(); return; }
             }
         }
         catch(Exception ex) { Log(ex); Send(new {@event="error", error=ex.Message}); }
@@ -130,6 +131,45 @@ internal static class Program
             Send(new {@event="probe",qualities=list});
         }
         catch(Exception ex){Send(new {@event="probe",qualities=new List<object>()});}
+    }
+
+    static void Update()
+    {
+        try
+        {
+            string root = "";
+            string id = "";
+            string cfg = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VideoFlowNative", "install-config.json");
+            if (File.Exists(cfg))
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(cfg));
+                root = doc.RootElement.TryGetProperty("installRoot", out var r) ? r.GetString() ?? "" : "";
+                id = doc.RootElement.TryGetProperty("extensionId", out var i) ? i.GetString() ?? "" : "";
+            }
+            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(Path.Combine(root, "extension")))
+            {
+                Send(new {@event="error",error="VideoFlow installation folder was not found."});
+                return;
+            }
+            string updater = Path.Combine(AppContext.BaseDirectory, "VideoFlowUpdater.exe");
+            if (!File.Exists(updater))
+            {
+                Send(new {@event="error",error="VideoFlow updater is not installed. Run install.ps1 once to install it."});
+                return;
+            }
+            var psi = new ProcessStartInfo
+            {
+                FileName = updater,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            psi.ArgumentList.Add(root);
+            psi.ArgumentList.Add(Environment.ProcessId.ToString());
+            psi.ArgumentList.Add(id);
+            Process.Start(psi);
+            Send(new {@event="update_started"});
+        }
+        catch(Exception ex) { Log(ex); Send(new {@event="error",error=ex.Message}); }
     }
 
     static void Download(string url,string filename,string referer,string origin,string ua,string cookie,int videoStream)
