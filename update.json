@@ -1,10 +1,12 @@
 {
-  "version": "4.0.2",
-  "released": "2026-08-28",
+  "version": "5.0.0",
+  "released": "2026-08-29",
   "notes": [
-    "Fix broken supported-site icons",
-    "Use reliable favicon endpoint",
-    "Add automatic letter fallback if a favicon cannot load"
+    "Health monitoring",
+    "Local diagnostics",
+    "Periodic health checks",
+    "Automatic update checking",
+    "Safe user-controlled update installation"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
