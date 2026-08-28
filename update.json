@@ -1,10 +1,10 @@
 {
-  "version": "3.2.10",
+  "version": "3.2.11",
   "released": "2026-08-28",
   "notes": [
-    "Fix extension popup not opening",
-    "Add real toolbar and extension icons",
-    "Updater test release"
+    "Add SpankBang support",
+    "Inject VideoFlow detector on SpankBang video pages",
+    "Support generic direct MP4/HLS/DASH detection where exposed by the page"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
