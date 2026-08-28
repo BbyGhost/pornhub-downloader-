@@ -24,30 +24,41 @@ async function update(){
 btn.onclick=check; check();
 
 const sites = [
-  ["XVideos","https://www.xvideos.com/"],
-  ["Pornhub","https://www.pornhub.com/"],
-  ["xHamster","https://xhamster.com/"],
-  ["XNXX","https://www.xnxx.com/"],
-  ["YouPorn","https://www.you-porn.com/"],
-  ["Eporner","https://www.eporner.com/"],
-  ["RedTube","https://www.redtube.com/"],
-  ["Sxyprn","https://www.sxyprn.com/"],
-  ["SpankBang","https://spankbang.com/"]
+  ["XVideos","xvideos.com"],
+  ["Pornhub","pornhub.com"],
+  ["xHamster","xhamster.com"],
+  ["XNXX","xnxx.com"],
+  ["YouPorn","youporn.com"],
+  ["Eporner","eporner.com"],
+  ["RedTube","redtube.com"],
+  ["Sxyprn","sxyprn.com"],
+  ["SpankBang","spankbang.com"]
 ];
 const sitesEl = document.getElementById("sites");
 if (sitesEl) {
-  for (const [name, url] of sites) {
+  for (const [name, domain] of sites) {
     const a = document.createElement("a");
     a.className = "site";
-    a.href = url;
+    a.href = "https://" + domain + "/";
     a.target = "_blank";
-    a.rel = "noopener";
+    a.rel = "noopener noreferrer";
     const img = document.createElement("img");
     img.alt = "";
-    img.src = "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(new URL(url).hostname) + "&sz=64";
+    img.width = 28;
+    img.height = 28;
+    img.loading = "eager";
+    img.src = "https://icons.duckduckgo.com/ip3/" + domain + ".ico";
+    const fallback = document.createElement("span");
+    fallback.className = "site-fallback";
+    fallback.textContent = name.slice(0,1).toUpperCase();
+    fallback.style.display = "none";
+    img.addEventListener("error", () => {
+      img.style.display = "none";
+      fallback.style.display = "grid";
+    });
     const span = document.createElement("span");
     span.textContent = name;
-    a.append(img, span);
+    a.append(img, fallback, span);
     sitesEl.appendChild(a);
   }
 }
