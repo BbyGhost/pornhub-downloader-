@@ -1,10 +1,10 @@
 {
-  "version": "4.0.1",
+  "version": "4.0.2",
   "released": "2026-08-28",
   "notes": [
-    "Add supported-sites launcher with site icons",
-    "Click a site icon to open it directly",
-    "Keep VideoFlow 4.0 downloader features"
+    "Fix broken supported-site icons",
+    "Use reliable favicon endpoint",
+    "Add automatic letter fallback if a favicon cannot load"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
