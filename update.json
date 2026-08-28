@@ -1,14 +1,10 @@
 {
-  "version": "4.0.0",
+  "version": "4.0.1",
   "released": "2026-08-28",
   "notes": [
-    "VideoFlow 4.0 major upgrade",
-    "Download queue up to 5 jobs",
-    "Download history up to 30 items",
-    "Quality inspector now shows codec",
-    "Improved download progress handling",
-    "SpankBang support retained",
-    "FFmpeg native bridge retained"
+    "Add supported-sites launcher with site icons",
+    "Click a site icon to open it directly",
+    "Keep VideoFlow 4.0 downloader features"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
