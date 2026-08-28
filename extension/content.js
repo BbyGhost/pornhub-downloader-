@@ -8,6 +8,9 @@
   let activeAnchor = null;
   let scanTimer = null;
   let menuOpen = false;
+  let downloadQueue = [];
+  let queueRunning = false;
+  const MAX_QUEUE = 5;
   const manifests = new Map();
   const masterManifests = new Map();
 
@@ -188,11 +191,11 @@
     for (const quality of list) {
       const item = document.createElement("button");
       const height = Number(quality.height) || 0;
-      item.textContent = height > 0 ? `${height}p${quality.fps ? ` • ${quality.fps}fps` : ""}` : "Source / Best Available";
+      item.textContent = height > 0 ? `${height}p${quality.fps ? ` • ${quality.fps}fps` : ""}${quality.codec ? ` • ${String(quality.codec).toUpperCase()}` : ""}` : "Best Available";
       Object.assign(item.style, { display:"block", width:"100%", padding:"9px 10px", margin:"2px 0", border:"0", borderRadius:"8px", background:"transparent", color:"#eef1f6", fontSize:"11px", fontWeight:"700", textAlign:"left", cursor:"pointer" });
       item.addEventListener("mouseenter", () => { item.style.background = "#202631"; });
       item.addEventListener("mouseleave", () => { item.style.background = "transparent"; });
-      item.addEventListener("click", async event => { event.preventDefault(); event.stopPropagation(); menuOpen = false; widget.menu.style.display = "none"; await startDownload(quality.url || fallbackSource.url, height, Number.isInteger(Number(quality.streamIndex)) ? Number(quality.streamIndex) : null); });
+      item.addEventListener("click", async event => { event.preventDefault(); event.stopPropagation(); menuOpen = false; widget.menu.style.display = "none"; enqueueDownload({url:quality.url || fallbackSource.url,height,videoStream:Number.isInteger(Number(quality.streamIndex)) ? Number(quality.streamIndex) : null}); });
       widget.menu.appendChild(item);
     }
     menuOpen = true;
@@ -231,6 +234,41 @@
     }
   }
 
+  function enqueueDownload(job) {
+    if (!job?.url) return;
+    if (downloadQueue.length >= MAX_QUEUE) {
+      showStatus("Queue is full (5 downloads)", true);
+      setTimeout(() => showStatus("", false), 2200);
+      return;
+    }
+    downloadQueue.push({...job});
+    updateQueueButton();
+    runQueue();
+  }
+
+  function updateQueueButton() {
+    if (!widget) return;
+    if (queueRunning) {
+      widget.button.textContent = downloadQueue.length ? `Downloading… • ${downloadQueue.length} queued` : "Downloading…";
+    } else if (downloadQueue.length) {
+      widget.button.textContent = `↓  Download queued (${downloadQueue.length})`;
+    } else {
+      widget.button.textContent = "↓  Download MP4";
+    }
+  }
+
+  async function runQueue() {
+    if (queueRunning) return;
+    queueRunning = true;
+    while (downloadQueue.length) {
+      const job = downloadQueue.shift();
+      updateQueueButton();
+      await startDownload(job.url, job.height, job.videoStream);
+    }
+    queueRunning = false;
+    updateQueueButton();
+  }
+
   async function startDownload(url, height, videoStream = null) {
     if (!activeVideo || !widget) return;
     widget.button.disabled = true;
@@ -250,6 +288,11 @@
       widget.progressInner.style.width = "100%";
       widget.button.textContent = "✓  Downloaded";
       showStatus("Download completed", true);
+      try {
+        const saved = (await chrome.storage.local.get("vfHistory")).vfHistory || [];
+        saved.unshift({title: filename.replace(/\.mp4$/i,""), quality: height || 0, url, time: Date.now()});
+        await chrome.storage.local.set({vfHistory: saved.slice(0,30)});
+      } catch {}
       setTimeout(() => { if (!widget) return; widget.button.disabled = false; widget.button.style.opacity = "1"; widget.button.textContent = "↓  Download MP4"; widget.progressOuter.style.display = "none"; widget.progressInner.style.width = "0%"; showStatus("", false); }, 2500);
     } catch (error) {
       console.error("VideoFlow download:", error);
@@ -314,7 +357,7 @@
   }, true);
   window.addEventListener("scroll", positionWidget, { passive:true });
   window.addEventListener("resize", positionWidget, { passive:true });
-  setInterval(scan, 500);
+  setInterval(scan, 800);
   createWidget();
   positionWidget();
   scan();
