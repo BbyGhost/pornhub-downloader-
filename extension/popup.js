@@ -62,3 +62,12 @@ if (sitesEl) {
     sitesEl.appendChild(a);
   }
 }
+
+(async()=>{
+ const el=document.getElementById("health"); if(!el)return;
+ try{const r=await chrome.runtime.sendMessage({type:"vf-health"});
+ if(r?.health?.ok){el.textContent="● System healthy";el.className="health ok";}
+ else if(r?.health){el.textContent="● Problem detected — diagnostics saved";el.className="health bad";}
+ else el.textContent="● Health check pending";
+ }catch{el.textContent="● Health status unavailable";}
+})();
