@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VideoFlow Downloader",
-  "version": "3.2.10",
+  "version": "3.2.11",
   "description": "One-click MP4 downloader with quality selection, FFmpeg progress, premium toolbar icon and automatic updates.",
   "permissions": [
     "nativeMessaging",
@@ -25,7 +25,9 @@
     "https://www.redtube.com/*",
     "https://redtube.com/*",
     "https://www.sxyprn.com/*",
-    "https://sxyprn.com/*"
+    "https://sxyprn.com/*",
+    "https://www.spankbang.com/*",
+    "https://spankbang.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -57,7 +59,9 @@
         "https://www.redtube.com/*",
         "https://redtube.com/*",
         "https://www.sxyprn.com/*",
-        "https://sxyprn.com/*"
+        "https://sxyprn.com/*",
+        "https://www.spankbang.com/*",
+        "https://spankbang.com/*"
       ],
       "all_frames": true,
       "match_about_blank": true,
@@ -88,7 +92,9 @@
         "https://www.redtube.com/*",
         "https://redtube.com/*",
         "https://www.sxyprn.com/*",
-        "https://sxyprn.com/*"
+        "https://sxyprn.com/*",
+        "https://www.spankbang.com/*",
+        "https://spankbang.com/*"
       ]
     }
   ],
