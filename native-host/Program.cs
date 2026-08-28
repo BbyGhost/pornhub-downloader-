@@ -123,7 +123,8 @@ internal static class Program
                         int height=s.TryGetProperty("height",out var h)&&h.TryGetInt32(out var he)?he:0;
                         int index=s.TryGetProperty("index",out var ix)&&ix.TryGetInt32(out var ii)?ii:0;
                         string fps=s.TryGetProperty("r_frame_rate",out var fr)?fr.GetString()??"":"";
-                        if(width>0 && height>0) list.Add(new {height,width,fps,streamIndex=index});
+                        string codec=s.TryGetProperty("codec_name",out var cn)?cn.GetString()??"":"";
+                        if(width>0 && height>0) list.Add(new {height,width,fps,codec,streamIndex=index});
                     }
                 }
             }
