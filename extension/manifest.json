@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VideoFlow Downloader",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "VideoFlow 4.0 — one-click media downloader with quality inspector, queue, progress, history, FFmpeg and automatic updates.",
   "permissions": [
     "nativeMessaging",
@@ -103,5 +103,8 @@
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' data: https://www.google.com;"
   }
 }
