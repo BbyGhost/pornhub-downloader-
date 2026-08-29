@@ -228,9 +228,9 @@ internal static class Program
 
                     // Recovery profiles deliberately avoid optional network flags first.
                     if(attempt == 0) { /* minimal: no optional HTTP arguments */ }
-                    else if(attempt == 1) AddHeaders(psi,referer,"",ua,"",false,false);
-                    else if(attempt == 2) AddHeaders(psi,referer,origin,ua,"",false,true);
-                    else AddHeaders(psi,referer,origin,ua,cookie,false,true);
+                    else if(attempt == 1) { AddHeaders(psi,referer,"",ua,"",false,false); }
+                    else if(attempt == 2) { AddHeaders(psi,referer,origin,ua,"",false,true); psi.ArgumentList.Add("-rw_timeout"); psi.ArgumentList.Add("120000000"); }
+                    else { AddHeaders(psi,referer,origin,ua,cookie,false,true); psi.ArgumentList.Add("-rw_timeout"); psi.ArgumentList.Add("600000000"); }
 
                     psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);
                     if(videoStream >= 0)
@@ -312,6 +312,8 @@ internal static class Program
         string m=message.ToLowerInvariant();
         return m.Contains("option not found") ||
                m.Contains("unrecognized option") ||
+               m.Contains("error number -138") ||
+               m.Contains("timed out") ||
                m.Contains("unknown option") ||
                m.Contains("error splitting the argument list") ||
                m.Contains("invalid argument");
