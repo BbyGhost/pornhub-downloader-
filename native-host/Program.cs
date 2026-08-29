@@ -77,15 +77,13 @@ internal static class Program
         catch {}
     }
 
-    static void AddHeaders(ProcessStartInfo psi,string referer,string origin,string ua,string cookie)
+    static void AddHeaders(ProcessStartInfo psi,string referer,string origin,string ua,string cookie,bool timeout=true,bool extraHeaders=true)
     {
         if(!string.IsNullOrWhiteSpace(ua)){psi.ArgumentList.Add("-user_agent");psi.ArgumentList.Add(ua);}
         if(!string.IsNullOrWhiteSpace(referer)){psi.ArgumentList.Add("-referer");psi.ArgumentList.Add(referer);}
-        if(!string.IsNullOrWhiteSpace(origin)){psi.ArgumentList.Add("-headers");psi.ArgumentList.Add("Origin: "+origin+"\r\n");}
-        if(!string.IsNullOrWhiteSpace(cookie)){psi.ArgumentList.Add("-headers");psi.ArgumentList.Add("Cookie: "+cookie+"\r\n");}
-        // Keep the input options conservative for compatibility with different FFmpeg builds.
-        // Some builds reject reconnect_* options with "Option not found".
-        psi.ArgumentList.Add("-rw_timeout");psi.ArgumentList.Add("60000000");
+        if(extraHeaders && !string.IsNullOrWhiteSpace(origin)){psi.ArgumentList.Add("-headers");psi.ArgumentList.Add("Origin: "+origin+"\r\n");}
+        if(extraHeaders && !string.IsNullOrWhiteSpace(cookie)){psi.ArgumentList.Add("-headers");psi.ArgumentList.Add("Cookie: "+cookie+"\r\n");}
+        if(timeout) psi.ArgumentList.Add("-rw_timeout");psi.ArgumentList.Add("60000000");
     }
 
     static void Probe(string url,string referer,string origin,string ua,string cookie)
@@ -216,7 +214,7 @@ internal static class Program
             Exception? lastError=null;
             // Recovery ladder: if a particular FFmpeg build rejects an optional argument,
             // retry automatically with a more conservative command line.
-            for(int attempt=0; attempt<3; attempt++)
+            for(int attempt=0; attempt<4; attempt++)
             {
                 try { if(File.Exists(temp)) File.Delete(temp); } catch {}
                 try
@@ -227,21 +225,16 @@ internal static class Program
                         RedirectStandardOutput=true,CreateNoWindow=true
                     };
                     psi.ArgumentList.Add("-hide_banner");
-                    AddNetworkFamily(psi,url);
+                    if(attempt < 2) AddNetworkFamily(psi,url);
                     psi.ArgumentList.Add("-y");
 
                     // Attempt 0: normal headers + timeout.
                     // Attempt 1: omit timeout if unsupported.
                     // Attempt 2: minimal command line, retaining only essential headers.
-                    if(attempt < 2)
-                    {
-                        AddHeaders(psi,referer,origin,ua,cookie);
-                    }
-                    else
-                    {
-                        if(!string.IsNullOrWhiteSpace(ua)){psi.ArgumentList.Add("-user_agent");psi.ArgumentList.Add(ua);}
-                        if(!string.IsNullOrWhiteSpace(referer)){psi.ArgumentList.Add("-referer");psi.ArgumentList.Add(referer);}
-                    }
+                    if(attempt == 0) AddHeaders(psi,referer,origin,ua,cookie,true,true);
+                    else if(attempt == 1) AddHeaders(psi,referer,origin,ua,cookie,false,true);
+                    else if(attempt == 2) AddHeaders(psi,referer,"",ua,cookie,false,false);
+                    else if(!string.IsNullOrWhiteSpace(ua)) { psi.ArgumentList.Add("-user_agent"); psi.ArgumentList.Add(ua); }
 
                     psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);
                     if(videoStream >= 0)
@@ -288,7 +281,7 @@ internal static class Program
 
                     lastError=new Exception("FFmpeg failed: "+last);
                     if(!IsRecoverableFfmpegError(last)) break;
-                    Send(new {@event="recovery",attempt=attempt+1,message="Retrying with safer FFmpeg options…"});
+                    Send(new {@event="recovery",attempt=attempt+1,message="FFmpeg rejected an option; automatically retrying with a safer command…"});
                 }
                 catch(Exception ex)
                 {
