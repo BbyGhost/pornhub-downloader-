@@ -77,13 +77,12 @@ internal static class Program
         catch {}
     }
 
-    static void AddHeaders(ProcessStartInfo psi,string referer,string origin,string ua,string cookie,bool timeout=true,bool extraHeaders=true)
+    static void AddHeaders(ProcessStartInfo psi,string referer,string origin,string ua,string cookie,bool timeout=false,bool extraHeaders=true)
     {
         if(!string.IsNullOrWhiteSpace(ua)){psi.ArgumentList.Add("-user_agent");psi.ArgumentList.Add(ua);}
         if(!string.IsNullOrWhiteSpace(referer)){psi.ArgumentList.Add("-referer");psi.ArgumentList.Add(referer);}
         if(extraHeaders && !string.IsNullOrWhiteSpace(origin)){psi.ArgumentList.Add("-headers");psi.ArgumentList.Add("Origin: "+origin+"\r\n");}
         if(extraHeaders && !string.IsNullOrWhiteSpace(cookie)){psi.ArgumentList.Add("-headers");psi.ArgumentList.Add("Cookie: "+cookie+"\r\n");}
-        if(timeout) { psi.ArgumentList.Add("-rw_timeout"); psi.ArgumentList.Add("60000000"); }
     }
 
     static void Probe(string url,string referer,string origin,string ua,string cookie)
@@ -92,7 +91,7 @@ internal static class Program
         {
             var psi=new ProcessStartInfo{FileName=Ffprobe(),UseShellExecute=false,RedirectStandardError=true,RedirectStandardOutput=true,CreateNoWindow=true};
             psi.ArgumentList.Add("-v");psi.ArgumentList.Add("error");
-            AddNetworkFamily(psi,url);AddHeaders(psi,referer,origin,ua,cookie);
+            AddHeaders(psi,referer,origin,ua,cookie);
             psi.ArgumentList.Add("-show_entries");psi.ArgumentList.Add("stream=index,codec_type,width,height,r_frame_rate");
             psi.ArgumentList.Add("-of");psi.ArgumentList.Add("json");psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);
 
@@ -225,16 +224,13 @@ internal static class Program
                         RedirectStandardOutput=true,CreateNoWindow=true
                     };
                     psi.ArgumentList.Add("-hide_banner");
-                    if(attempt < 2) AddNetworkFamily(psi,url);
                     psi.ArgumentList.Add("-y");
 
-                    // Attempt 0: normal headers + timeout.
-                    // Attempt 1: omit timeout if unsupported.
-                    // Attempt 2: minimal command line, retaining only essential headers.
-                    if(attempt == 0) AddHeaders(psi,referer,origin,ua,cookie,true,true);
-                    else if(attempt == 1) AddHeaders(psi,referer,origin,ua,cookie,false,true);
-                    else if(attempt == 2) AddHeaders(psi,referer,"",ua,cookie,false,false);
-                    else if(!string.IsNullOrWhiteSpace(ua)) { psi.ArgumentList.Add("-user_agent"); psi.ArgumentList.Add(ua); }
+                    // Recovery profiles deliberately avoid optional network flags first.
+                    if(attempt == 0) { /* minimal: no optional HTTP arguments */ }
+                    else if(attempt == 1) AddHeaders(psi,referer,"",ua,"",false,false);
+                    else if(attempt == 2) AddHeaders(psi,referer,origin,ua,"",false,true);
+                    else AddHeaders(psi,referer,origin,ua,cookie,false,true);
 
                     psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);
                     if(videoStream >= 0)
@@ -252,11 +248,12 @@ internal static class Program
                     psi.ArgumentList.Add(temp);
 
                     using var p=Process.Start(psi)!;
-                    double duration=0; string last="";
+                    double duration=0; string last=""; var diagnostics=new StringBuilder();
                     while(!p.StandardError.EndOfStream)
                     {
                         string line=p.StandardError.ReadLine()??"";
                         last=line;
+                        if(!string.IsNullOrWhiteSpace(line)) { diagnostics.AppendLine(line); if(diagnostics.Length>12000) diagnostics.Remove(0,diagnostics.Length-12000); }
                         int di=line.IndexOf("Duration:",StringComparison.OrdinalIgnoreCase);
                         if(di>=0) duration=Parse(line.Substring(di+9).Split(',')[0].Trim());
                         int ti=line.IndexOf("time=",StringComparison.OrdinalIgnoreCase);
@@ -279,7 +276,9 @@ internal static class Program
                         return;
                     }
 
-                    lastError=new Exception("FFmpeg failed: "+last);
+                    string detail=diagnostics.ToString().Trim();
+                    string unrecognized=ExtractUnrecognizedOption(detail);
+                    lastError=new Exception(string.IsNullOrWhiteSpace(unrecognized) ? "FFmpeg failed: "+last : $"FFmpeg rejected option {unrecognized}: {last}");
                     if(!IsRecoverableFfmpegError(last)) break;
                     Send(new {@event="recovery",attempt=attempt+1,message="FFmpeg rejected an option; automatically retrying with a safer command…"});
                 }
@@ -295,6 +294,17 @@ internal static class Program
             throw lastError ?? new Exception("Download failed.");
         }
         catch(Exception ex){Log(ex);Send(new {@event="error",error=ex.Message});}
+    }
+
+    static string ExtractUnrecognizedOption(string text)
+    {
+        int p=text.LastIndexOf("Unrecognized option",StringComparison.OrdinalIgnoreCase);
+        if(p<0) p=text.LastIndexOf("Unknown option",StringComparison.OrdinalIgnoreCase);
+        if(p<0) return "";
+        string tail=text.Substring(p);
+        int q=tail.IndexOf("'");
+        if(q>=0) { int q2=tail.IndexOf("'",q+1); if(q2>q) return tail.Substring(q,q2-q+1); }
+        return "";
     }
 
     static bool IsRecoverableFfmpegError(string message)
