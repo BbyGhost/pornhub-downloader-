@@ -1,11 +1,10 @@
 {
-  "version": "5.0.5",
+  "version": "5.0.6",
   "released": "2026-08-29",
   "notes": [
-    "Automatically recover FFmpeg -138 timeouts",
-    "Retry timed-out inputs with 120s and 600s read/write windows",
-    "Keep minimal command first for compatibility",
-    "Preserve diagnostics and health monitoring"
+    "Expose complete FFmpeg stderr diagnostics",
+    "Identify the exact rejected option instead of hiding it behind the final parser error",
+    "Recovery now evaluates the complete diagnostic output"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
