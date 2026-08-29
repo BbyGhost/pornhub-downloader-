@@ -1,11 +1,11 @@
 {
-  "version": "5.0.4",
+  "version": "5.0.5",
   "released": "2026-08-29",
   "notes": [
-    "Remove fragile IPv4/IPv6 and timeout flags from FFmpeg launch",
-    "Start downloads with a minimal compatible FFmpeg command",
-    "Progressively add only required HTTP headers on recovery",
-    "Show the actual rejected FFmpeg option in errors"
+    "Automatically recover FFmpeg -138 timeouts",
+    "Retry timed-out inputs with 120s and 600s read/write windows",
+    "Keep minimal command first for compatibility",
+    "Preserve diagnostics and health monitoring"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
