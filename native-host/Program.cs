@@ -278,9 +278,11 @@ internal static class Program
 
                     string detail=diagnostics.ToString().Trim();
                     string unrecognized=ExtractUnrecognizedOption(detail);
-                    lastError=new Exception(string.IsNullOrWhiteSpace(unrecognized) ? "FFmpeg failed: "+last : $"FFmpeg rejected option {unrecognized}: {last}");
-                    if(!IsRecoverableFfmpegError(last)) break;
-                    Send(new {@event="recovery",attempt=attempt+1,message="FFmpeg rejected an option; automatically retrying with a safer command…"});
+                    string shown = string.IsNullOrWhiteSpace(unrecognized) ? detail : $"FFmpeg rejected option {unrecognized}.\\r\\n{detail}";
+                    if(shown.Length>6000) shown=shown.Substring(Math.Max(0,shown.Length-6000));
+                    lastError=new Exception("FFmpeg failed:\\r\\n"+shown);
+                    if(!IsRecoverableFfmpegError(detail)) break;
+                    Send(new {@event="recovery",attempt=attempt+1,message=$"FFmpeg recovery attempt {attempt+1}/4…"});
                 }
                 catch(Exception ex)
                 {
