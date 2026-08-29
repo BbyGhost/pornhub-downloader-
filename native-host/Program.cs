@@ -83,7 +83,7 @@ internal static class Program
         if(!string.IsNullOrWhiteSpace(referer)){psi.ArgumentList.Add("-referer");psi.ArgumentList.Add(referer);}
         if(extraHeaders && !string.IsNullOrWhiteSpace(origin)){psi.ArgumentList.Add("-headers");psi.ArgumentList.Add("Origin: "+origin+"\r\n");}
         if(extraHeaders && !string.IsNullOrWhiteSpace(cookie)){psi.ArgumentList.Add("-headers");psi.ArgumentList.Add("Cookie: "+cookie+"\r\n");}
-        if(timeout) psi.ArgumentList.Add("-rw_timeout");psi.ArgumentList.Add("60000000");
+        if(timeout) { psi.ArgumentList.Add("-rw_timeout"); psi.ArgumentList.Add("60000000"); }
     }
 
     static void Probe(string url,string referer,string origin,string ua,string cookie)
