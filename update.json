@@ -1,10 +1,11 @@
 {
-  "version": "5.0.3",
+  "version": "5.0.4",
   "released": "2026-08-29",
   "notes": [
-    "Fix recovery ladder so retries actually remove incompatible FFmpeg options",
-    "Progressive fallback removes timeout, extra headers and network-family flags",
-    "Improved recovery message"
+    "Remove fragile IPv4/IPv6 and timeout flags from FFmpeg launch",
+    "Start downloads with a minimal compatible FFmpeg command",
+    "Progressively add only required HTTP headers on recovery",
+    "Show the actual rejected FFmpeg option in errors"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
