@@ -83,12 +83,9 @@ internal static class Program
         if(!string.IsNullOrWhiteSpace(referer)){psi.ArgumentList.Add("-referer");psi.ArgumentList.Add(referer);}
         if(!string.IsNullOrWhiteSpace(origin)){psi.ArgumentList.Add("-headers");psi.ArgumentList.Add("Origin: "+origin+"\r\n");}
         if(!string.IsNullOrWhiteSpace(cookie)){psi.ArgumentList.Add("-headers");psi.ArgumentList.Add("Cookie: "+cookie+"\r\n");}
+        // Keep the input options conservative for compatibility with different FFmpeg builds.
+        // Some builds reject reconnect_* options with "Option not found".
         psi.ArgumentList.Add("-rw_timeout");psi.ArgumentList.Add("60000000");
-        psi.ArgumentList.Add("-reconnect");psi.ArgumentList.Add("1");
-        psi.ArgumentList.Add("-reconnect_streamed");psi.ArgumentList.Add("1");
-        psi.ArgumentList.Add("-reconnect_at_eof");psi.ArgumentList.Add("1");
-        psi.ArgumentList.Add("-reconnect_on_network_error");psi.ArgumentList.Add("1");
-        psi.ArgumentList.Add("-reconnect_delay_max");psi.ArgumentList.Add("10");
     }
 
     static void Probe(string url,string referer,string origin,string ua,string cookie)
@@ -211,7 +208,12 @@ internal static class Program
             string output=Path.Combine(folder,safe); int n=1; while(File.Exists(output))output=Path.Combine(folder,$"{Path.GetFileNameWithoutExtension(safe)} ({n++}).mp4");
             string temp=output+".part.mp4"; try { if(File.Exists(temp)) File.Delete(temp); } catch {}
             var psi=new ProcessStartInfo{FileName=Ffmpeg(),UseShellExecute=false,RedirectStandardError=true,RedirectStandardOutput=true,CreateNoWindow=true};
-            psi.ArgumentList.Add("-hide_banner");AddNetworkFamily(psi,url);psi.ArgumentList.Add("-y");AddHeaders(psi,referer,origin,ua,cookie);psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);psi.ArgumentList.Add("-map");psi.ArgumentList.Add(videoStream >= 0 ? $"0:{videoStream}" : "0:v:0?");psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:a:0?");psi.ArgumentList.Add("-c");psi.ArgumentList.Add("copy");psi.ArgumentList.Add("-movflags");psi.ArgumentList.Add("+faststart");psi.ArgumentList.Add("-f");psi.ArgumentList.Add("mp4");psi.ArgumentList.Add(temp);
+            psi.ArgumentList.Add("-hide_banner");AddNetworkFamily(psi,url);psi.ArgumentList.Add("-y");AddHeaders(psi,referer,origin,ua,cookie);psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);if(videoStream >= 0) {
+                psi.ArgumentList.Add("-map");psi.ArgumentList.Add($"0:{videoStream}");
+            } else {
+                psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:v:0?");
+            }
+            psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:a:0?");psi.ArgumentList.Add("-c");psi.ArgumentList.Add("copy");psi.ArgumentList.Add("-movflags");psi.ArgumentList.Add("+faststart");psi.ArgumentList.Add("-f");psi.ArgumentList.Add("mp4");psi.ArgumentList.Add(temp);
             using var p=Process.Start(psi)!; double duration=0; string last="";
             while(!p.StandardError.EndOfStream){string line=p.StandardError.ReadLine()??"";last=line;int di=line.IndexOf("Duration:",StringComparison.OrdinalIgnoreCase);if(di>=0)duration=Parse(line.Substring(di+9).Split(',')[0].Trim());int ti=line.IndexOf("time=",StringComparison.OrdinalIgnoreCase);if(ti>=0){double cur=Parse(line.Substring(ti+5).Split(' ')[0].Trim());double pct=duration>0?Math.Min(99,cur/duration*100):0;string speed="";int si=line.IndexOf("speed=",StringComparison.OrdinalIgnoreCase);if(si>=0)speed=line.Substring(si+6).Split(' ')[0].Trim();Send(new {@event="progress",progress=pct,speed});}}
             p.WaitForExit(); if(p.ExitCode!=0)
