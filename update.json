@@ -1,12 +1,10 @@
 {
-  "version": "5.0.0",
+  "version": "5.0.1",
   "released": "2026-08-29",
   "notes": [
-    "Health monitoring",
-    "Local diagnostics",
-    "Periodic health checks",
-    "Automatic update checking",
-    "Safe user-controlled update installation"
+    "Fix FFmpeg Option not found failures",
+    "Use conservative FFmpeg network options for wider compatibility",
+    "Preserve quality selection, queue, health monitoring and diagnostics"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
