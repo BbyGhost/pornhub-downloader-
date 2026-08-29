@@ -204,31 +204,114 @@ internal static class Program
         try
         {
             string folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads","VideoFlow");
-            Directory.CreateDirectory(folder); string safe=Safe(filename); if(!safe.EndsWith(".mp4",StringComparison.OrdinalIgnoreCase))safe+=".mp4";
-            string output=Path.Combine(folder,safe); int n=1; while(File.Exists(output))output=Path.Combine(folder,$"{Path.GetFileNameWithoutExtension(safe)} ({n++}).mp4");
-            string temp=output+".part.mp4"; try { if(File.Exists(temp)) File.Delete(temp); } catch {}
-            var psi=new ProcessStartInfo{FileName=Ffmpeg(),UseShellExecute=false,RedirectStandardError=true,RedirectStandardOutput=true,CreateNoWindow=true};
-            psi.ArgumentList.Add("-hide_banner");AddNetworkFamily(psi,url);psi.ArgumentList.Add("-y");AddHeaders(psi,referer,origin,ua,cookie);psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);if(videoStream >= 0) {
-                psi.ArgumentList.Add("-map");psi.ArgumentList.Add($"0:{videoStream}");
-            } else {
-                psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:v:0?");
-            }
-            psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:a:0?");psi.ArgumentList.Add("-c");psi.ArgumentList.Add("copy");psi.ArgumentList.Add("-movflags");psi.ArgumentList.Add("+faststart");psi.ArgumentList.Add("-f");psi.ArgumentList.Add("mp4");psi.ArgumentList.Add(temp);
-            using var p=Process.Start(psi)!; double duration=0; string last="";
-            while(!p.StandardError.EndOfStream){string line=p.StandardError.ReadLine()??"";last=line;int di=line.IndexOf("Duration:",StringComparison.OrdinalIgnoreCase);if(di>=0)duration=Parse(line.Substring(di+9).Split(',')[0].Trim());int ti=line.IndexOf("time=",StringComparison.OrdinalIgnoreCase);if(ti>=0){double cur=Parse(line.Substring(ti+5).Split(' ')[0].Trim());double pct=duration>0?Math.Min(99,cur/duration*100):0;string speed="";int si=line.IndexOf("speed=",StringComparison.OrdinalIgnoreCase);if(si>=0)speed=line.Substring(si+6).Split(' ')[0].Trim();Send(new {@event="progress",progress=pct,speed});}}
-            p.WaitForExit(); if(p.ExitCode!=0)
+            Directory.CreateDirectory(folder);
+            string safe=Safe(filename);
+            if(!safe.EndsWith(".mp4",StringComparison.OrdinalIgnoreCase)) safe+=".mp4";
+            string output=Path.Combine(folder,safe);
+            int n=1;
+            while(File.Exists(output)) output=Path.Combine(folder,$"{Path.GetFileNameWithoutExtension(safe)} ({n++}).mp4");
+            string temp=output+".part.mp4";
+            try { if(File.Exists(temp)) File.Delete(temp); } catch {}
+
+            Exception? lastError=null;
+            // Recovery ladder: if a particular FFmpeg build rejects an optional argument,
+            // retry automatically with a more conservative command line.
+            for(int attempt=0; attempt<3; attempt++)
             {
                 try { if(File.Exists(temp)) File.Delete(temp); } catch {}
-                string detail=last;
-                if(detail.Contains("-138",StringComparison.OrdinalIgnoreCase) || detail.Contains("timed out",StringComparison.OrdinalIgnoreCase))
-                    detail="Connection to the video server timed out. The site may require a fresh session or the CDN may be temporarily unavailable.";
-                throw new Exception("FFmpeg failed: "+detail);
-            } if(!File.Exists(temp)||new FileInfo(temp).Length==0)throw new Exception("Output file was not created.");
-            if(File.Exists(output)) File.Delete(output);
-            File.Move(temp,output);
-            Send(new {@event="complete",path=output,progress=100});
+                try
+                {
+                    var psi=new ProcessStartInfo
+                    {
+                        FileName=Ffmpeg(),UseShellExecute=false,RedirectStandardError=true,
+                        RedirectStandardOutput=true,CreateNoWindow=true
+                    };
+                    psi.ArgumentList.Add("-hide_banner");
+                    AddNetworkFamily(psi,url);
+                    psi.ArgumentList.Add("-y");
+
+                    // Attempt 0: normal headers + timeout.
+                    // Attempt 1: omit timeout if unsupported.
+                    // Attempt 2: minimal command line, retaining only essential headers.
+                    if(attempt < 2)
+                    {
+                        AddHeaders(psi,referer,origin,ua,cookie);
+                    }
+                    else
+                    {
+                        if(!string.IsNullOrWhiteSpace(ua)){psi.ArgumentList.Add("-user_agent");psi.ArgumentList.Add(ua);}
+                        if(!string.IsNullOrWhiteSpace(referer)){psi.ArgumentList.Add("-referer");psi.ArgumentList.Add(referer);}
+                    }
+
+                    psi.ArgumentList.Add("-i");psi.ArgumentList.Add(url);
+                    if(videoStream >= 0)
+                    {
+                        psi.ArgumentList.Add("-map");psi.ArgumentList.Add($"0:{videoStream}");
+                    }
+                    else
+                    {
+                        psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:v:0?");
+                    }
+                    psi.ArgumentList.Add("-map");psi.ArgumentList.Add("0:a:0?");
+                    psi.ArgumentList.Add("-c");psi.ArgumentList.Add("copy");
+                    psi.ArgumentList.Add("-movflags");psi.ArgumentList.Add("+faststart");
+                    psi.ArgumentList.Add("-f");psi.ArgumentList.Add("mp4");
+                    psi.ArgumentList.Add(temp);
+
+                    using var p=Process.Start(psi)!;
+                    double duration=0; string last="";
+                    while(!p.StandardError.EndOfStream)
+                    {
+                        string line=p.StandardError.ReadLine()??"";
+                        last=line;
+                        int di=line.IndexOf("Duration:",StringComparison.OrdinalIgnoreCase);
+                        if(di>=0) duration=Parse(line.Substring(di+9).Split(',')[0].Trim());
+                        int ti=line.IndexOf("time=",StringComparison.OrdinalIgnoreCase);
+                        if(ti>=0)
+                        {
+                            double cur=Parse(line.Substring(ti+5).Split(' ')[0].Trim());
+                            double pct=duration>0?Math.Min(99,cur/duration*100):0;
+                            string speed="";
+                            int si=line.IndexOf("speed=",StringComparison.OrdinalIgnoreCase);
+                            if(si>=0) speed=line.Substring(si+6).Split(' ')[0].Trim();
+                            Send(new {@event="progress",progress=pct,speed,attempt=attempt+1});
+                        }
+                    }
+                    p.WaitForExit();
+                    if(p.ExitCode==0 && File.Exists(temp) && new FileInfo(temp).Length>0)
+                    {
+                        if(File.Exists(output)) File.Delete(output);
+                        File.Move(temp,output);
+                        Send(new {@event="complete",path=output,progress=100,recovered=attempt>0});
+                        return;
+                    }
+
+                    lastError=new Exception("FFmpeg failed: "+last);
+                    if(!IsRecoverableFfmpegError(last)) break;
+                    Send(new {@event="recovery",attempt=attempt+1,message="Retrying with safer FFmpeg options…"});
+                }
+                catch(Exception ex)
+                {
+                    lastError=ex;
+                    if(!IsRecoverableFfmpegError(ex.Message)) break;
+                    Send(new {@event="recovery",attempt=attempt+1,message="Retrying with safer FFmpeg options…"});
+                }
+            }
+
+            try { if(File.Exists(temp)) File.Delete(temp); } catch {}
+            throw lastError ?? new Exception("Download failed.");
         }
         catch(Exception ex){Log(ex);Send(new {@event="error",error=ex.Message});}
+    }
+
+    static bool IsRecoverableFfmpegError(string message)
+    {
+        string m=message.ToLowerInvariant();
+        return m.Contains("option not found") ||
+               m.Contains("unrecognized option") ||
+               m.Contains("unknown option") ||
+               m.Contains("error splitting the argument list") ||
+               m.Contains("invalid argument");
     }
 
     static string Safe(string s){if(string.IsNullOrWhiteSpace(s))return"video";foreach(char c in Path.GetInvalidFileNameChars())s=s.Replace(c,' ');s=s.Trim().TrimEnd('.',' ');if(string.IsNullOrWhiteSpace(s))return"video";string u=s.Trim().TrimEnd('.',' ').ToUpperInvariant();string[] reserved={"CON","PRN","AUX","NUL","COM1","COM2","COM3","COM4","COM5","COM6","COM7","COM8","COM9","LPT1","LPT2","LPT3","LPT4","LPT5","LPT6","LPT7","LPT8","LPT9"};if(Array.Exists(reserved,x=>x==u||u.StartsWith(x+".")))s="_"+s;return s;}
