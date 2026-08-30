@@ -103,7 +103,17 @@ internal static class Program
                         throw new Exception("Native bridge update failed. Code: " + installer.ExitCode);
                 }
 
-                    WriteStatus(root, true, "Updated successfully.", local.version, remote.version);
+                    // Validate the new extension before removing the previous-version backup.
+                string newManifestPath = Path.Combine(root, "extension", "manifest.json");
+                if (!File.Exists(newManifestPath))
+                    throw new Exception("Update verification failed: manifest.json is missing.");
+                var installed = JsonSerializer.Deserialize<Manifest>(await File.ReadAllTextAsync(newManifestPath));
+                if (installed == null || !string.Equals(installed.version, remote.version, StringComparison.OrdinalIgnoreCase))
+                    throw new Exception($"Update verification failed: expected {remote.version}, found {installed?.version ?? "unknown"}.");
+
+                // The new version is valid. Keep ONE rollback backup and remove older backups.
+                CleanupOldBackups(root, backupPath);
+                WriteStatus(root, true, "Updated successfully. Old files cleaned.", local.version, remote.version);
                 ScheduleSelfDelete();
                 return 0;
             }
@@ -154,6 +164,45 @@ internal static class Program
             Version.TryParse(b.TrimStart('v','V'), out var bv))
             return av > bv;
         return !string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    static void CleanupOldBackups(string root, string currentBackupPath)
+    {
+        try
+        {
+            string parent = Directory.GetParent(root)?.FullName ?? "";
+            string name = Path.GetFileName(root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            if (string.IsNullOrWhiteSpace(parent) || string.IsNullOrWhiteSpace(name)) return;
+
+            var backups = Directory.GetDirectories(parent, name + ".backup-*")
+                .OrderByDescending(Directory.GetCreationTimeUtc)
+                .ToList();
+
+            bool keptCurrent = false;
+            foreach (var dir in backups)
+            {
+                bool isCurrent = !string.IsNullOrWhiteSpace(currentBackupPath) &&
+                                  Path.GetFullPath(dir).Equals(
+                                      Path.GetFullPath(Directory.GetParent(currentBackupPath)?.FullName ?? ""),
+                                      StringComparison.OrdinalIgnoreCase);
+
+                if (!keptCurrent && isCurrent)
+                {
+                    keptCurrent = true;
+                    continue;
+                }
+
+                // Keep the newest backup if the current backup path could not be identified.
+                if (!keptCurrent && dir == backups.First())
+                {
+                    keptCurrent = true;
+                    continue;
+                }
+
+                try { Directory.Delete(dir, true); } catch {}
+            }
+        }
+        catch {}
     }
 
     static void CopyDirectory(string src, string dst)
