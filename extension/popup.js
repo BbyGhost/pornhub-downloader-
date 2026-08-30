@@ -30,7 +30,7 @@ const sites = [
   ["XNXX","xnxx.com"],
   ["YouPorn","youporn.com"],
   ["Eporner","eporner.com"],
-  ["RedTube","redtube.com"],
+  ["RedTube","redtube.net"],
   ["Sxyprn","sxyprn.com"],
   ["SpankBang","spankbang.com"]
 ];
