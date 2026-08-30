@@ -1,10 +1,9 @@
 {
-  "version": "5.0.6",
-  "released": "2026-08-29",
+  "version": "5.0.7",
+  "released": "2026-08-30",
   "notes": [
-    "Expose complete FFmpeg stderr diagnostics",
-    "Identify the exact rejected option instead of hiding it behind the final parser error",
-    "Recovery now evaluates the complete diagnostic output"
+    "Add RedTube.net to supported sites",
+    "Add RedTube.net host permissions and content-script coverage"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
