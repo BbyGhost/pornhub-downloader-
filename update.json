@@ -1,9 +1,11 @@
 {
-  "version": "5.0.7",
+  "version": "5.0.8",
   "released": "2026-08-30",
   "notes": [
-    "Add RedTube.net to supported sites",
-    "Add RedTube.net host permissions and content-script coverage"
+    "Automatically clean old update backups after successful verification",
+    "Keep one rollback backup only",
+    "Remove obsolete older backup directories",
+    "Verify installed manifest version before cleanup"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
