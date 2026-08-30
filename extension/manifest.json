@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VideoFlow Downloader",
-  "version": "5.0.6",
+  "version": "5.0.7",
   "description": "VideoFlow 5.0 — resilient downloader with health monitoring, diagnostics, quality selection, queue, FFmpeg and safe updates.",
   "permissions": [
     "nativeMessaging",
@@ -27,7 +27,9 @@
     "https://www.sxyprn.com/*",
     "https://sxyprn.com/*",
     "https://www.spankbang.com/*",
-    "https://spankbang.com/*"
+    "https://spankbang.com/*",
+    "https://www.redtube.net/*",
+    "https://redtube.net/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -61,7 +63,9 @@
         "https://www.sxyprn.com/*",
         "https://sxyprn.com/*",
         "https://www.spankbang.com/*",
-        "https://spankbang.com/*"
+        "https://spankbang.com/*",
+        "https://www.redtube.net/*",
+        "https://redtube.net/*"
       ],
       "all_frames": true,
       "match_about_blank": true,
@@ -94,7 +98,9 @@
         "https://www.sxyprn.com/*",
         "https://sxyprn.com/*",
         "https://www.spankbang.com/*",
-        "https://spankbang.com/*"
+        "https://spankbang.com/*",
+        "https://www.redtube.net/*",
+        "https://redtube.net/*"
       ]
     }
   ],
