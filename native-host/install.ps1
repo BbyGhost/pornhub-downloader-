@@ -37,10 +37,9 @@ if([string]::IsNullOrWhiteSpace($InstallRoot)){
 }
 $InstallRoot=(Resolve-Path $InstallRoot).Path
 
-# Build in a temporary install area. The updater waits for the old native host
-# to exit before invoking this script, so the installed EXE can be replaced.
-Remove-Item $InstallDir -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path $MainBuild,$UpdaterBuild,$PublishDir,$UpdaterPublishDir | Out-Null
+# Never wipe the entire install directory during an update.
+# The updater itself lives here and must survive while this script runs.
+New-Item -ItemType Directory -Force -Path $InstallDir,$MainBuild,$UpdaterBuild,$PublishDir,$UpdaterPublishDir | Out-Null
 
 Copy-Item (Join-Path $SourceRoot "Program.cs") (Join-Path $MainBuild "Program.cs") -Force
 Copy-Item (Join-Path $SourceRoot "VideoFlowNative.csproj") (Join-Path $MainBuild "VideoFlowNative.csproj") -Force
