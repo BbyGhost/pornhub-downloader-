@@ -1,11 +1,11 @@
 {
-  "version": "5.0.8",
-  "released": "2026-08-30",
+  "version": "6.0.0",
+  "released": "2026-09-02",
   "notes": [
-    "Automatically clean old update backups after successful verification",
-    "Keep one rollback backup only",
-    "Remove obsolete older backup directories",
-    "Verify installed manifest version before cleanup"
+    "Stability upgrade: top-frame UI ownership prevents duplicate widgets",
+    "Event-driven scanning removes continuous 800ms polling",
+    "Native installer no longer wipes the updater directory during updates",
+    "Automatic cleanup and rollback backup retained"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
