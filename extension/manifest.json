@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "VideoFlow Downloader",
-  "version": "5.0.8",
-  "description": "VideoFlow 5.0 — resilient downloader with health monitoring, diagnostics, quality selection, queue, FFmpeg and safe updates.",
+  "version": "6.0.0",
+  "description": "VideoFlow 6.0 — stable single-frame UI, efficient event-driven scanning, resilient FFmpeg downloads and safe automatic updates.",
   "permissions": [
     "nativeMessaging",
     "cookies",
@@ -67,7 +67,7 @@
         "https://www.redtube.net/*",
         "https://redtube.net/*"
       ],
-      "all_frames": true,
+      "all_frames": false,
       "match_about_blank": true,
       "js": [
         "content.js"
