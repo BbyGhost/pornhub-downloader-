@@ -1,5 +1,8 @@
 (() => {
   "use strict";
+  // Only the top document owns the floating UI. Iframes can still host media,
+  // but must not create duplicate buttons/popups.
+  if (window.top !== window) return;
   if (window.__VIDEOFLOW_SINGLE_BUTTON__) return;
   window.__VIDEOFLOW_SINGLE_BUTTON__ = true;
 
@@ -357,7 +360,7 @@
   }, true);
   window.addEventListener("scroll", positionWidget, { passive:true });
   window.addEventListener("resize", positionWidget, { passive:true });
-  setInterval(scan, 800);
+  // Initial scan plus event-driven rescans; avoid polling every 800 ms forever.\n  scan();
   createWidget();
   positionWidget();
   scan();
