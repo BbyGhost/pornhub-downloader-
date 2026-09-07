@@ -6,6 +6,7 @@ param(
 
 $ErrorActionPreference="Stop"
 $HostName="com.videoflow.fresh"
+$TaskName="VideoFlow Automatic Updater"
 $SourceRoot=Split-Path -Parent $MyInvocation.MyCommand.Path
 $InstallDir=Join-Path $env:LOCALAPPDATA "VideoFlowNative"
 $MainBuild=Join-Path $InstallDir "build"
@@ -14,8 +15,8 @@ $PublishDir=Join-Path $InstallDir "publish"
 $UpdaterPublishDir=Join-Path $InstallDir "updater-publish"
 $Exe=Join-Path $InstallDir "VideoFlowNative.exe"
 $UpdaterExe=Join-Path $InstallDir "VideoFlowUpdater.exe"
+$Launcher=Join-Path $InstallDir "VideoFlowAutoUpdate.ps1"
 $Manifest=Join-Path $InstallDir "$HostName.json"
-$TaskName="VideoFlow Automatic Updater"
 
 Write-Host "=== VideoFlow Native Bridge + Updater ==="
 
@@ -43,8 +44,8 @@ if([string]::IsNullOrWhiteSpace($InstallRoot)){
 }
 $InstallRoot=(Resolve-Path $InstallRoot).Path
 
-# Never wipe the whole install directory during an update. The updater
-# and native bridge live here and must remain available while this script runs.
+# Never wipe the whole install directory during an update. The updater,
+# launcher and native bridge live here and must remain available.
 New-Item -ItemType Directory -Force -Path $InstallDir,$MainBuild,$UpdaterBuild,$PublishDir,$UpdaterPublishDir | Out-Null
 
 Copy-Item (Join-Path $SourceRoot "Program.cs") (Join-Path $MainBuild "Program.cs") -Force
@@ -67,9 +68,6 @@ try {
 if(!(Test-Path (Join-Path $PublishDir "VideoFlowNative.exe"))){throw "Native bridge executable was not produced."}
 if(!(Test-Path (Join-Path $UpdaterPublishDir "VideoFlowUpdater.exe"))){throw "Updater executable was not produced."}
 
-# The updater may be the process that launched this installer. Windows can keep
-# the running updater executable locked, so update the native bridge here and
-# only replace the updater binary when it is not currently running.
 Copy-Item (Join-Path $PublishDir "VideoFlowNative.exe") $Exe -Force
 if(-not (Get-Process -Name "VideoFlowUpdater" -ErrorAction SilentlyContinue)){
   Copy-Item (Join-Path $UpdaterPublishDir "VideoFlowUpdater.exe") $UpdaterExe -Force
@@ -98,17 +96,40 @@ try { $installedVersion=(Get-Content (Join-Path $InstallRoot "extension\manifest
   installedAt=(Get-Date).ToString("o")
 } | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $InstallDir "install-config.json")
 
-# One-time setup creates a per-user Windows scheduled task. This makes the
-# updater independent of Chrome: it can check GitHub and repair/update the
-# extension + native bridge even when Chrome is closed.
+# Persistent launcher: copies the updater to a temporary file before running it.
+# This prevents Windows from locking the installed updater while the updater
+# replaces the native bridge/updater during an automatic update.
+$launcherContent=@'
+$ErrorActionPreference="SilentlyContinue"
+$installDir=Join-Path $env:LOCALAPPDATA "VideoFlowNative"
+$updater=Join-Path $installDir "VideoFlowUpdater.exe"
+$config=Join-Path $installDir "install-config.json"
+if(!(Test-Path $updater) -or !(Test-Path $config)){exit 0}
 try {
-  $action=New-ScheduledTaskAction -Execute $UpdaterExe -Argument ('"' + $InstallRoot + '"')
-  $trigger=New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) -RepetitionInterval (New-TimeSpan -Hours 6) -RepetitionDuration ([TimeSpan]::MaxValue)
-  $settings=New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 1)
-  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Description "Checks VideoFlow for verified updates and repairs." -Force | Out-Null
+  $c=Get-Content $config -Raw | ConvertFrom-Json
+  $root=[string]$c.installRoot
+  $id=[string]$c.extensionId
+  if([string]::IsNullOrWhiteSpace($root)){exit 0}
+  $temp=Join-Path ([System.IO.Path]::GetTempPath()) ("VideoFlowUpdater-"+[guid]::NewGuid().ToString("N")+".exe")
+  Copy-Item $updater $temp -Force
+  $p=Start-Process -FilePath $temp -ArgumentList @($root,"0",$id) -PassThru -WindowStyle Hidden
+  $p.WaitForExit()
+  Start-Sleep -Seconds 2
+  Remove-Item $temp -Force -ErrorAction SilentlyContinue
+} catch {}
+'@
+Set-Content -Path $Launcher -Value $launcherContent -Encoding UTF8 -Force
+
+# Register a per-user Windows scheduled task. It does not require administrator
+# rights and runs every 6 hours even when Chrome is closed.
+try {
+  $action=New-ScheduledTaskAction -Execute "powershell.exe" -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}"' -f $Launcher)
+  $trigger=New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) -RepetitionInterval (New-TimeSpan -Hours 6) -RepetitionDuration (New-TimeSpan -Days 3650)
+  $settings=New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 1)
+  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Description "Checks VideoFlow for verified updates every 6 hours." -Force | Out-Null
   Write-Host "Automatic updater task: enabled (every 6 hours)"
 } catch {
-  Write-Warning "Could not register the automatic updater task: $($_.Exception.Message)"
+  Write-Warning "Could not register automatic updater task: $($_.Exception.Message)"
 }
 
 Write-Host ""
@@ -116,4 +137,4 @@ Write-Host "SUCCESS: VideoFlow native bridge + automatic updater installed."
 Write-Host "Bridge:  $Exe"
 Write-Host "Updater: $UpdaterExe"
 Write-Host "Root:    $InstallRoot"
-Write-Host "Updates: automatic every 6 hours, plus Chrome startup/alarms."
+Write-Host "Task:    $TaskName"
