@@ -23,6 +23,11 @@ $ffPath=if($ff){$ff.Source}else{Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Li
 if(!(Test-Path $ffPath)){throw "FFmpeg not found."}
 Write-Host "FFmpeg: $ffPath"
 
+$fp=Get-Command ffprobe.exe -ErrorAction SilentlyContinue
+$fpPath=if($fp){$fp.Source}else{Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links\ffprobe.exe"}
+if(!(Test-Path $fpPath)){Write-Warning "ffprobe.exe not found. Quality detection will use the bridge fallback."}
+else{Write-Host "FFprobe: $fpPath"}
+
 $dotnet=Get-Command dotnet.exe -ErrorAction SilentlyContinue
 if(!$dotnet){throw "dotnet SDK not found."}
 Write-Host "dotnet: $(& dotnet --version)"
@@ -37,8 +42,8 @@ if([string]::IsNullOrWhiteSpace($InstallRoot)){
 }
 $InstallRoot=(Resolve-Path $InstallRoot).Path
 
-# Never wipe the entire install directory during an update.
-# The updater itself lives here and must survive while this script runs.
+# Never wipe the whole install directory during an update. The updater
+# and native bridge live here and must remain available while this script runs.
 New-Item -ItemType Directory -Force -Path $InstallDir,$MainBuild,$UpdaterBuild,$PublishDir,$UpdaterPublishDir | Out-Null
 
 Copy-Item (Join-Path $SourceRoot "Program.cs") (Join-Path $MainBuild "Program.cs") -Force
@@ -57,6 +62,9 @@ try {
   dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $UpdaterPublishDir
   if($LASTEXITCODE -ne 0){throw "Updater publish failed."}
 } finally { Pop-Location }
+
+if(!(Test-Path (Join-Path $PublishDir "VideoFlowNative.exe"))){throw "Native bridge executable was not produced."}
+if(!(Test-Path (Join-Path $UpdaterPublishDir "VideoFlowUpdater.exe"))){throw "Updater executable was not produced."}
 
 Copy-Item (Join-Path $PublishDir "VideoFlowNative.exe") $Exe -Force
 Copy-Item (Join-Path $UpdaterPublishDir "VideoFlowUpdater.exe") $UpdaterExe -Force
