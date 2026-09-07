@@ -1,11 +1,13 @@
 {
-  "version": "6.0.0",
-  "released": "2026-09-02",
+  "version": "6.1.0",
+  "released": "2026-09-07",
   "notes": [
-    "Stability upgrade: top-frame UI ownership prevents duplicate widgets",
-    "Event-driven scanning removes continuous 800ms polling",
-    "Native installer no longer wipes the updater directory during updates",
-    "Automatic cleanup and rollback backup retained"
+    "Native messaging now keeps one persistent stdin/stdout pair, preventing stream disposal and intermittent bridge failures",
+    "HTTP Origin and Cookie headers are combined into one FFmpeg header block for better compatibility",
+    "Quality probing now uses ffprobe and returns resolution, codec, FPS, bitrate and stream index",
+    "FFmpeg recovery keeps conservative profiles and exposes the real rejected option/diagnostic instead of only the last error line",
+    "Automatic updater now stages and verifies the extension before replacement, backs up native binaries, rolls back on failure, and cleans older backups",
+    "Extension automatically checks every 6 hours and reloads only after the updater reports a verified successful installation"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
