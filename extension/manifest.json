@@ -1,116 +1,32 @@
 {
   "manifest_version": 3,
   "name": "VideoFlow Downloader",
-  "version": "6.0.0",
-  "description": "VideoFlow 6.0 — stable single-frame UI, efficient event-driven scanning, resilient FFmpeg downloads and safe automatic updates.",
-  "permissions": [
-    "nativeMessaging",
-    "cookies",
-    "storage",
-    "alarms"
-  ],
+  "version": "6.1.0",
+  "description": "VideoFlow 6.1 — faster ffprobe quality detection, resilient FFmpeg networking and verified automatic updates with rollback.",
+  "permissions": ["nativeMessaging","cookies","storage","alarms"],
   "host_permissions": [
-    "https://www.xvideos.com/*",
-    "https://xvideos.com/*",
-    "https://www.pornhub.com/*",
-    "https://pornhub.com/*",
-    "https://www.xhamster.com/*",
-    "https://xhamster.com/*",
-    "https://www.xnxx.com/*",
-    "https://xnxx.com/*",
-    "https://www.you-porn.com/*",
-    "https://you-porn.com/*",
-    "https://www.eporner.com/*",
-    "https://eporner.com/*",
-    "https://www.redtube.com/*",
-    "https://redtube.com/*",
-    "https://www.sxyprn.com/*",
-    "https://sxyprn.com/*",
-    "https://www.spankbang.com/*",
-    "https://spankbang.com/*",
-    "https://www.redtube.net/*",
-    "https://redtube.net/*"
+    "https://www.xvideos.com/*","https://xvideos.com/*","https://www.pornhub.com/*","https://pornhub.com/*",
+    "https://www.xhamster.com/*","https://xhamster.com/*","https://www.xnxx.com/*","https://xnxx.com/*",
+    "https://www.you-porn.com/*","https://you-porn.com/*","https://www.eporner.com/*","https://eporner.com/*",
+    "https://www.redtube.com/*","https://redtube.com/*","https://www.sxyprn.com/*","https://sxyprn.com/*",
+    "https://www.spankbang.com/*","https://spankbang.com/*","https://www.redtube.net/*","https://redtube.net/*"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "action": {
-    "default_title": "VideoFlow Downloader",
-    "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "32": "icons/icon32.png",
-      "48": "icons/icon48.png"
-    }
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "https://www.xvideos.com/*",
-        "https://xvideos.com/*",
-        "https://www.pornhub.com/*",
-        "https://pornhub.com/*",
-        "https://www.xhamster.com/*",
-        "https://xhamster.com/*",
-        "https://www.xnxx.com/*",
-        "https://xnxx.com/*",
-        "https://www.you-porn.com/*",
-        "https://you-porn.com/*",
-        "https://www.eporner.com/*",
-        "https://eporner.com/*",
-        "https://www.redtube.com/*",
-        "https://redtube.com/*",
-        "https://www.sxyprn.com/*",
-        "https://sxyprn.com/*",
-        "https://www.spankbang.com/*",
-        "https://spankbang.com/*",
-        "https://www.redtube.net/*",
-        "https://redtube.net/*"
-      ],
-      "all_frames": false,
-      "match_about_blank": true,
-      "js": [
-        "content.js"
-      ],
-      "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "page-hook.js"
-      ],
-      "matches": [
-        "https://www.xvideos.com/*",
-        "https://xvideos.com/*",
-        "https://www.pornhub.com/*",
-        "https://pornhub.com/*",
-        "https://www.xhamster.com/*",
-        "https://xhamster.com/*",
-        "https://www.xnxx.com/*",
-        "https://xnxx.com/*",
-        "https://www.you-porn.com/*",
-        "https://you-porn.com/*",
-        "https://www.eporner.com/*",
-        "https://eporner.com/*",
-        "https://www.redtube.com/*",
-        "https://redtube.com/*",
-        "https://www.sxyprn.com/*",
-        "https://sxyprn.com/*",
-        "https://www.spankbang.com/*",
-        "https://spankbang.com/*",
-        "https://www.redtube.net/*",
-        "https://redtube.net/*"
-      ]
-    }
-  ],
-  "icons": {
-    "16": "icons/icon16.png",
-    "32": "icons/icon32.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  },
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' data: https://icons.duckduckgo.com;"
-  }
+  "background":{"service_worker":"background.js"},
+  "action":{"default_title":"VideoFlow Downloader","default_popup":"popup.html","default_icon":{"16":"icons/icon16.png","32":"icons/icon32.png","48":"icons/icon48.png"}},
+  "content_scripts":[{"matches":[
+    "https://www.xvideos.com/*","https://xvideos.com/*","https://www.pornhub.com/*","https://pornhub.com/*",
+    "https://www.xhamster.com/*","https://xhamster.com/*","https://www.xnxx.com/*","https://xnxx.com/*",
+    "https://www.you-porn.com/*","https://you-porn.com/*","https://www.eporner.com/*","https://eporner.com/*",
+    "https://www.redtube.com/*","https://redtube.com/*","https://www.sxyprn.com/*","https://sxyprn.com/*",
+    "https://www.spankbang.com/*","https://spankbang.com/*","https://www.redtube.net/*","https://redtube.net/*"
+  ],"all_frames":false,"match_about_blank":true,"js":["content.js"],"run_at":"document_idle"}],
+  "web_accessible_resources":[{"resources":["page-hook.js"],"matches":[
+    "https://www.xvideos.com/*","https://xvideos.com/*","https://www.pornhub.com/*","https://pornhub.com/*",
+    "https://www.xhamster.com/*","https://xhamster.com/*","https://www.xnxx.com/*","https://xnxx.com/*",
+    "https://www.you-porn.com/*","https://you-porn.com/*","https://www.eporner.com/*","https://eporner.com/*",
+    "https://www.redtube.com/*","https://redtube.com/*","https://www.sxyprn.com/*","https://sxyprn.com/*",
+    "https://www.spankbang.com/*","https://spankbang.com/*","https://www.redtube.net/*","https://redtube.net/*"
+  ]}],
+  "icons":{"16":"icons/icon16.png","32":"icons/icon32.png","48":"icons/icon48.png","128":"icons/icon128.png"},
+  "content_security_policy":{"extension_pages":"script-src 'self'; object-src 'self'; img-src 'self' data: https://icons.duckduckgo.com;"}
 }
