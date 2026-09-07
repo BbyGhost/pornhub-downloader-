@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "VideoFlow Downloader",
-  "version": "6.1.0",
-  "description": "VideoFlow 6.1 — faster ffprobe quality detection, resilient FFmpeg networking and verified automatic updates with rollback.",
+  "version": "6.1.1",
+  "description": "VideoFlow 6.1.1 — automatic Windows updater scheduling and safer native update maintenance.",
   "permissions": ["nativeMessaging","cookies","storage","alarms"],
   "host_permissions": [
     "https://www.xvideos.com/*","https://xvideos.com/*","https://www.pornhub.com/*","https://pornhub.com/*",
