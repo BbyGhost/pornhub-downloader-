@@ -17,8 +17,9 @@ $Exe=Join-Path $InstallDir "VideoFlowNative.exe"
 $UpdaterExe=Join-Path $InstallDir "VideoFlowUpdater.exe"
 $Launcher=Join-Path $InstallDir "VideoFlowAutoUpdate.ps1"
 $Manifest=Join-Path $InstallDir "$HostName.json"
+$ConfigPath=Join-Path $InstallDir "install-config.json"
 
-Write-Host "=== VideoFlow Native Bridge + Updater ==="
+Write-Host "=== VideoFlow 8 Pro Native Engine ==="
 
 $ff=Get-Command ffmpeg.exe -ErrorAction SilentlyContinue
 $ffPath=if($ff){$ff.Source}else{Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links\ffmpeg.exe"}
@@ -48,31 +49,55 @@ $InstallRoot=(Resolve-Path $InstallRoot).Path
 # launcher and native bridge live here and must remain available.
 New-Item -ItemType Directory -Force -Path $InstallDir,$MainBuild,$UpdaterBuild,$PublishDir,$UpdaterPublishDir | Out-Null
 
-Copy-Item (Join-Path $SourceRoot "Program.cs") (Join-Path $MainBuild "Program.cs") -Force
-Copy-Item (Join-Path $SourceRoot "VideoFlowNative.csproj") (Join-Path $MainBuild "VideoFlowNative.csproj") -Force
-Copy-Item (Join-Path $SourceRoot "Updater.cs") (Join-Path $UpdaterBuild "Program.cs") -Force
-Copy-Item (Join-Path $SourceRoot "Updater.csproj") (Join-Path $UpdaterBuild "VideoFlowUpdater.csproj") -Force
-
-Push-Location $MainBuild
+$nativeSource=Join-Path $SourceRoot "Program.cs"
+$updaterSource=Join-Path $SourceRoot "Updater.cs"
+$nativeHash=(Get-FileHash $nativeSource -Algorithm SHA256).Hash
+$updaterHash=(Get-FileHash $updaterSource -Algorithm SHA256).Hash
+$oldNativeHash=""
+$oldUpdaterHash=""
 try {
-  dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $PublishDir
-  if($LASTEXITCODE -ne 0){throw "Native bridge publish failed."}
-} finally { Pop-Location }
+  if(Test-Path $ConfigPath){
+    $old=Get-Content $ConfigPath -Raw | ConvertFrom-Json
+    $oldNativeHash=[string]$old.nativeSourceHash
+    $oldUpdaterHash=[string]$old.updaterSourceHash
+  }
+} catch {}
 
-Push-Location $UpdaterBuild
-try {
-  dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $UpdaterPublishDir
-  if($LASTEXITCODE -ne 0){throw "Updater publish failed."}
-} finally { Pop-Location }
+$nativeChanged=($oldNativeHash -ne $nativeHash) -or !(Test-Path $Exe)
+$updaterChanged=($oldUpdaterHash -ne $updaterHash) -or !(Test-Path $UpdaterExe)
 
-if(!(Test-Path (Join-Path $PublishDir "VideoFlowNative.exe"))){throw "Native bridge executable was not produced."}
-if(!(Test-Path (Join-Path $UpdaterPublishDir "VideoFlowUpdater.exe"))){throw "Updater executable was not produced."}
-
-Copy-Item (Join-Path $PublishDir "VideoFlowNative.exe") $Exe -Force
-if(-not (Get-Process -Name "VideoFlowUpdater" -ErrorAction SilentlyContinue)){
-  Copy-Item (Join-Path $UpdaterPublishDir "VideoFlowUpdater.exe") $UpdaterExe -Force
+if($nativeChanged){
+  Copy-Item $nativeSource (Join-Path $MainBuild "Program.cs") -Force
+  Copy-Item (Join-Path $SourceRoot "VideoFlowNative.csproj") (Join-Path $MainBuild "VideoFlowNative.csproj") -Force
+  Push-Location $MainBuild
+  try {
+    dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $PublishDir --no-restore
+    if($LASTEXITCODE -ne 0){throw "Native bridge publish failed."}
+  } finally { Pop-Location }
+  if(!(Test-Path (Join-Path $PublishDir "VideoFlowNative.exe"))){throw "Native bridge executable was not produced."}
+  Copy-Item (Join-Path $PublishDir "VideoFlowNative.exe") $Exe -Force
+  Write-Host "Native engine rebuilt."
 } else {
-  Write-Host "Updater is currently running; keeping its executable until the next maintenance run."
+  Write-Host "Native engine unchanged; skipping publish."
+}
+
+if($updaterChanged){
+  Copy-Item $updaterSource (Join-Path $UpdaterBuild "Program.cs") -Force
+  Copy-Item (Join-Path $SourceRoot "Updater.csproj") (Join-Path $UpdaterBuild "VideoFlowUpdater.csproj") -Force
+  Push-Location $UpdaterBuild
+  try {
+    dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $UpdaterPublishDir --no-restore
+    if($LASTEXITCODE -ne 0){throw "Updater publish failed."}
+  } finally { Pop-Location }
+  if(!(Test-Path (Join-Path $UpdaterPublishDir "VideoFlowUpdater.exe"))){throw "Updater executable was not produced."}
+  if(-not (Get-Process -Name "VideoFlowUpdater" -ErrorAction SilentlyContinue)){
+    Copy-Item (Join-Path $UpdaterPublishDir "VideoFlowUpdater.exe") $UpdaterExe -Force
+  } else {
+    Write-Host "Updater is currently running; keeping its executable."
+  }
+  Write-Host "Updater rebuilt."
+} else {
+  Write-Host "Updater unchanged; skipping publish."
 }
 
 @{
@@ -93,8 +118,11 @@ try { $installedVersion=(Get-Content (Join-Path $InstallRoot "extension\manifest
   extensionId=$ExtensionId
   installRoot=$InstallRoot
   installedVersion=$installedVersion
+  nativeSourceHash=$nativeHash
+  updaterSourceHash=$updaterHash
+  engineVersion="8.0.0"
   installedAt=(Get-Date).ToString("o")
-} | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $InstallDir "install-config.json")
+} | ConvertTo-Json | Set-Content -Encoding UTF8 $ConfigPath
 
 # Persistent launcher: copies the updater to a temporary file before running it.
 # This prevents Windows from locking the installed updater while the updater
