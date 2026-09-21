@@ -26,12 +26,17 @@ jobs:
         shell: pwsh
         run: dotnet publish native-host/Updater.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/updater
 
+      - name: Publish setup launcher
+        shell: pwsh
+        run: dotnet publish native-host/VideoFlowLauncher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/launcher
+
       - name: Package engine
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts/package | Out-Null
           Copy-Item artifacts/native/VideoFlowNative.exe artifacts/package/VideoFlowNative.exe
           Copy-Item artifacts/updater/VideoFlowUpdater.exe artifacts/package/VideoFlowUpdater.exe
+          Copy-Item artifacts/launcher/VideoFlowSetup.exe artifacts/package/VideoFlowSetup.exe
           Compress-Archive -Path artifacts/package/* -DestinationPath artifacts/VideoFlow-8-Pro-win-x64.zip -Force
 
       - name: Upload native engine artifact
