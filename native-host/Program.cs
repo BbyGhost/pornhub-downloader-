@@ -213,6 +213,17 @@ internal static class Program
                 return;
             }
 
+            // Clear any stale completion/error state before launching a new updater.
+            // This lets the popup show the real current update stage immediately.
+            try
+            {
+                File.WriteAllText(
+                    Path.Combine(root, ".videoflow-update.json"),
+                    JsonSerializer.Serialize(new { ok = true, message = "Starting updater…", fromVersion = "", toVersion = "", at = DateTimeOffset.Now })
+                );
+            }
+            catch { }
+
             string tempUpdater = Path.Combine(Path.GetTempPath(), "VideoFlowUpdater-" + Guid.NewGuid().ToString("N") + ".exe");
             File.Copy(updater, tempUpdater, true);
             var psi = new ProcessStartInfo { FileName = tempUpdater, UseShellExecute = false, CreateNoWindow = true };
