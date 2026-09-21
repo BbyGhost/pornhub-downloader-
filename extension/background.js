@@ -106,7 +106,7 @@ async function waitForUpdateCompletion(targetVersion="") {
     try {
       const result=await nativeRequest({action:"update-status"});
       const status=result?.status;
-      const completed=status?.ok===true && status?.message==="Updated successfully. Old files cleaned.";
+      const completed=status?.ok===true && (status?.message==="Updated successfully. Old files cleaned." || status?.message==="Already up to date.");
       if(completed && (!targetVersion || status?.toVersion===targetVersion)) {
         await chrome.storage.local.set({vfUpdateApplied:{version:status?.toVersion||targetVersion,time:Date.now()}});
         chrome.runtime.reload();
@@ -142,7 +142,7 @@ chrome.runtime.onMessage.addListener((msg,sender,sendResponse)=>{
   if(msg?.type==="vf-frame-media"){forwardFrameMedia(msg,sender);return false;}
   if(msg?.type==="vf-check-update"){checkForUpdates(true,false).then(sendResponse);return true;}
   if(msg?.type==="vf-get-update"){chrome.storage.local.get("vfUpdate").then(x=>sendResponse({ok:true,info:x.vfUpdate||null}));return true;}
-  if(msg?.type==="vf-update-status"){nativeRequest({action:"update-status"},sender.tab?.id).then(r=>{const st=r?.status;if(st?.ok===false || st?.message==="Updated successfully. Old files cleaned." || st?.message==="Already up to date.") updateRunning=false;sendResponse({ok:true,result:r});if(st?.message==="Updated successfully. Old files cleaned.") setTimeout(()=>{try{chrome.runtime.reload();}catch{}},350);}).catch(e=>sendResponse({ok:false,error:e.message}));return true;}
+  if(msg?.type==="vf-update-status"){nativeRequest({action:"update-status"},sender.tab?.id).then(r=>{const st=r?.status;if(st?.ok===false || st?.message==="Updated successfully. Old files cleaned." || st?.message==="Already up to date.") updateRunning=false;sendResponse({ok:true,result:r});if(st?.message==="Updated successfully. Old files cleaned." || st?.message==="Already up to date.") setTimeout(()=>{try{chrome.runtime.reload();}catch{}},350);}).catch(e=>sendResponse({ok:false,error:e.message}));return true;}
   if(msg?.type==="vf-update-now"){
     if(updateRunning){sendResponse({ok:false,error:"An update is already running."});return true;}
     updateRunning=true;
