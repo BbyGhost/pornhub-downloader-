@@ -7,7 +7,7 @@ const $=id=>document.getElementById(id),current=chrome.runtime.getManifest().ver
       const s=await chrome.runtime.sendMessage({type:"vf-update-status"});
       const st=s?.result?.status;
       if(st?.message) setStatus(st.message,st.ok===false?"err":"ok");
-      if(st?.message==="Updated successfully. Old files cleaned."){
+      if(st?.message==="Updated successfully. Old files cleaned." || st?.message==="Already up to date."){
         done=true;
         setStatus("Updated successfully. Reloading…","ok");
         btn.textContent="Reloading…";
