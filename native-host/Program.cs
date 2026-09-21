@@ -4,6 +4,11 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading;
+using System.Threading.Tasks;
 
 internal static class Program
 {
@@ -220,6 +225,126 @@ internal static class Program
         catch (Exception ex) { Log(ex); Send(new { @event = "error", error = ex.Message }); }
     }
 
+    static bool LooksLikePlaylist(string url)
+    {
+        string u = (url ?? "").ToLowerInvariant();
+        return u.Contains(".m3u8") || u.Contains(".mpd") || u.Contains("manifest") || u.Contains("playlist");
+    }
+
+    static async Task<(bool ok, long bytes, string error)> TryParallelDirectDownload(string url, string output, string referer, string origin, string ua, string cookie)
+    {
+        // Direct progressive files can be much faster when the server supports byte ranges.
+        // HLS/DASH playlists stay on FFmpeg because they require segment/manifest handling.
+        if (LooksLikePlaylist(url)) return (false, 0, "playlist");
+
+        try
+        {
+            using var client = new HttpClient(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.None })
+            {
+                Timeout = TimeSpan.FromMinutes(20)
+            };
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(string.IsNullOrWhiteSpace(ua) ? "Mozilla/5.0" : ua);
+            if (!string.IsNullOrWhiteSpace(referer)) client.DefaultRequestHeaders.Referrer = new Uri(referer);
+            if (!string.IsNullOrWhiteSpace(origin)) client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", origin);
+            if (!string.IsNullOrWhiteSpace(cookie)) client.DefaultRequestHeaders.TryAddWithoutValidation("Cookie", cookie);
+
+            using var firstReq = new HttpRequestMessage(HttpMethod.Get, url);
+            firstReq.Headers.Range = new RangeHeaderValue(0, 0);
+            using var first = await client.SendAsync(firstReq, HttpCompletionOption.ResponseHeadersRead);
+            if (first.StatusCode != HttpStatusCode.PartialContent || first.Content.Headers.ContentRange?.Length is not long total || total <= 1024 * 1024)
+                return (false, 0, "server does not expose a usable byte range");
+
+            string ct = first.Content.Headers.ContentType?.MediaType ?? "";
+            if (!string.IsNullOrWhiteSpace(ct) && !ct.StartsWith("video/", StringComparison.OrdinalIgnoreCase) &&
+                !ct.Equals("application/octet-stream", StringComparison.OrdinalIgnoreCase))
+                return (false, 0, "source is not a direct video object");
+
+            int workers = total >= 512L * 1024 * 1024 ? 8 : total >= 128L * 1024 * 1024 ? 6 : 4;
+            long chunk = Math.Max(4L * 1024 * 1024, (total + workers - 1) / workers);
+            string dir = output + ".vfparts";
+            Directory.CreateDirectory(dir);
+            var tasks = new List<Task>();
+            var errors = new List<Exception>();
+            long completed = 0;
+            object progressLock = new();
+
+            for (int i = 0; i < workers; i++)
+            {
+                long start = i * chunk;
+                if (start >= total) break;
+                long end = Math.Min(total - 1, start + chunk - 1);
+                int partIndex = i;
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        string part = Path.Combine(dir, partIndex.ToString("D3") + ".part");
+                        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                        req.Headers.Range = new RangeHeaderValue(start, end);
+                        using var resp = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+                        resp.EnsureSuccessStatusCode();
+                        if (resp.Content.Headers.ContentRange?.From != start || resp.Content.Headers.ContentRange?.To != end)
+                            throw new IOException("Server returned an unexpected byte range.");
+                        await using var input = await resp.Content.ReadAsStreamAsync();
+                        await using var outputStream = new FileStream(part, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024, useAsync: true);
+                        byte[] buffer = new byte[1024 * 1024];
+                        int read;
+                        long local = 0;
+                        while ((read = await input.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                        {
+                            await outputStream.WriteAsync(buffer, 0, read);
+                            local += read;
+                            lock (progressLock)
+                            {
+                                completed += read;
+                                double pct = Math.Min(99, completed * 100.0 / total);
+                                Send(new { @event = "progress", progress = pct, speed = "parallel" });
+                            }
+                        }
+                        if (local != end - start + 1) throw new IOException("A ranged segment was incomplete.");
+                    }
+                    catch (Exception ex)
+                    {
+                        lock (errors) errors.Add(ex);
+                    }
+                }));
+            }
+
+            await Task.WhenAll(tasks);
+            if (errors.Count > 0) return (false, 0, errors[0].Message);
+
+            string temp = output + ".parallel.part";
+            try
+            {
+                if (File.Exists(temp)) File.Delete(temp);
+                await using var combined = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 1024, useAsync: true);
+                for (int i = 0; i < workers; i++)
+                {
+                    string part = Path.Combine(dir, i.ToString("D3") + ".part");
+                    if (!File.Exists(part)) throw new IOException("Missing ranged segment.");
+                    await using var input = new FileStream(part, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, useAsync: true);
+                    await input.CopyToAsync(combined, 1024 * 1024);
+                }
+                await combined.FlushAsync();
+                if (new FileInfo(temp).Length != total) throw new IOException("Combined file size does not match the source.");
+                if (File.Exists(output)) File.Delete(output);
+                File.Move(temp, output);
+                Send(new { @event = "progress", progress = 100, speed = "parallel" });
+                return (true, total, "");
+            }
+            finally
+            {
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+                try { if (Directory.Exists(dir)) Directory.Delete(dir, true); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            try { if (Directory.Exists(output + ".vfparts")) Directory.Delete(output + ".vfparts", true); } catch { }
+            return (false, 0, ex.Message);
+        }
+    }
+
     static void Download(string url, string filename, string referer, string origin, string ua, string cookie, int videoStream)
     {
         try
@@ -232,6 +357,23 @@ internal static class Program
             int n = 1;
             while (File.Exists(output)) output = Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(safe)} ({n++}).mp4");
             string temp = output + ".part.mp4";
+            // Fast path for progressive MP4/WebM sources: use multiple HTTP range requests
+            // when the server supports them. This leaves HLS/DASH and non-range servers to FFmpeg.
+            try
+            {
+                var fast = TryParallelDirectDownload(url, output, referer, origin, ua, cookie).GetAwaiter().GetResult();
+                if (fast.ok)
+                {
+                    var validation = ValidateOutput(output);
+                    if (validation.ok)
+                    {
+                        Send(new { @event = "complete", path = output, progress = 100, recovered = false, bytes = fast.bytes, duration = validation.duration, mode = "parallel-range" });
+                        return;
+                    }
+                    try { if (File.Exists(output)) File.Delete(output); } catch { }
+                }
+            }
+            catch { }
 
             Exception? lastError = null;
             for (int attempt = 0; attempt < 4; attempt++)
