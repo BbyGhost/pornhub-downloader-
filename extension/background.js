@@ -101,7 +101,7 @@ async function checkForUpdates(manual=false,autoInstall=false) {
 }
 
 async function waitForUpdateCompletion(targetVersion="") {
-  for(let i=0;i<60;i++) {
+  for(let i=0;i<120;i++) {
     await new Promise(r=>setTimeout(r,500));
     try {
       const result=await nativeRequest({action:"update-status"});
@@ -115,7 +115,7 @@ async function waitForUpdateCompletion(targetVersion="") {
       if(status?.ok===false) return false;
     } catch {}
   }
-  await recordDiagnostic("update-timeout",new Error("Automatic update did not report completion within 30 seconds."));
+  await recordDiagnostic("update-timeout",new Error("Automatic update did not report completion within 60 seconds."));
   return false;
 }
 
@@ -146,7 +146,11 @@ chrome.runtime.onMessage.addListener((msg,sender,sendResponse)=>{
   if(msg?.type==="vf-update-now"){
     if(updateRunning){sendResponse({ok:false,error:"An update is already running."});return true;}
     updateRunning=true;
-    nativeRequest({action:"update"},sender.tab?.id).then(async r=>{await waitForUpdateCompletion();return {ok:true,result:r};}).then(sendResponse).catch(e=>sendResponse({ok:false,error:e.message})).finally(()=>{updateRunning=false;});
+    nativeRequest({action:"update"},sender.tab?.id).then(async r=>{
+      const completed=await waitForUpdateCompletion();
+      if(!completed) throw new Error("Update did not complete. Open chrome://extensions and check the extension error details.");
+      return {ok:true,result:r};
+    }).then(sendResponse).catch(e=>sendResponse({ok:false,error:e.message})).finally(()=>{updateRunning=false;});
     return true;
   }
   if(msg?.type==="vf-probe"){
