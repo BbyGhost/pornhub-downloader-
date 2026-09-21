@@ -71,7 +71,7 @@ if($nativeChanged){
   Copy-Item (Join-Path $SourceRoot "VideoFlowNative.csproj") (Join-Path $MainBuild "VideoFlowNative.csproj") -Force
   Push-Location $MainBuild
   try {
-    dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $PublishDir --no-restore
+    dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $PublishDir
     if($LASTEXITCODE -ne 0){throw "Native bridge publish failed."}
   } finally { Pop-Location }
   if(!(Test-Path (Join-Path $PublishDir "VideoFlowNative.exe"))){throw "Native bridge executable was not produced."}
@@ -86,7 +86,7 @@ if($updaterChanged){
   Copy-Item (Join-Path $SourceRoot "Updater.csproj") (Join-Path $UpdaterBuild "VideoFlowUpdater.csproj") -Force
   Push-Location $UpdaterBuild
   try {
-    dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $UpdaterPublishDir --no-restore
+    dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $UpdaterPublishDir
     if($LASTEXITCODE -ne 0){throw "Updater publish failed."}
   } finally { Pop-Location }
   if(!(Test-Path (Join-Path $UpdaterPublishDir "VideoFlowUpdater.exe"))){throw "Updater executable was not produced."}
