@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "VideoFlow Downloader",
-  "version": "6.1.1",
-  "description": "VideoFlow 6.1.1 — automatic Windows updater scheduling and safer native update maintenance.",
+  "version": "7.0.0",
+  "description": "VideoFlow 7.0 — faster media detection, iframe support, redesigned UI and resilient non-DRM downloads.",
   "permissions": ["nativeMessaging","cookies","storage","alarms"],
   "host_permissions": [
     "https://www.xvideos.com/*","https://xvideos.com/*","https://www.pornhub.com/*","https://pornhub.com/*",
@@ -19,7 +19,7 @@
     "https://www.you-porn.com/*","https://you-porn.com/*","https://www.eporner.com/*","https://eporner.com/*",
     "https://www.redtube.com/*","https://redtube.com/*","https://www.sxyprn.com/*","https://sxyprn.com/*",
     "https://www.spankbang.com/*","https://spankbang.com/*","https://www.redtube.net/*","https://redtube.net/*"
-  ],"all_frames":false,"match_about_blank":true,"js":["content.js"],"run_at":"document_idle"}],
+  ],"all_frames":true,"match_about_blank":true,"js":["content.js"],"run_at":"document_idle"}],
   "web_accessible_resources":[{"resources":["page-hook.js"],"matches":[
     "https://www.xvideos.com/*","https://xvideos.com/*","https://www.pornhub.com/*","https://pornhub.com/*",
     "https://www.xhamster.com/*","https://xhamster.com/*","https://www.xnxx.com/*","https://xnxx.com/*",
