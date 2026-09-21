@@ -12,5 +12,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Program.cs" />
+    <Compile Remove="Launcher.cs" />
   </ItemGroup>
 </Project>
