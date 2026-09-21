@@ -1,12 +1,12 @@
 {
-  "version": "7.1.0",
+  "version": "7.1.1",
   "released": "2026-09-21",
   "notes": [
     "Adds a parallel HTTP range-download path for direct video files when the server supports byte ranges",
     "Uses multiple concurrent ranged requests to improve throughput on progressive MP4/WebM sources",
     "Keeps HLS/DASH and servers without usable range support on the FFmpeg recovery path",
     "Retains completed-file validation before reporting a successful download",
-    "Native bridge is rebuilt automatically by the staged updater"
+    "Fixes the update UI so live updater stages are visible instead of appearing stuck"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
