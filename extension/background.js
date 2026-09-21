@@ -133,7 +133,13 @@ chrome.alarms.onAlarm.addListener(async a=>{
 });
 chrome.runtime.onStartup.addListener(async()=>{await healthCheck();await runAutomaticUpdate();});
 
+async function forwardFrameMedia(msg, sender) {
+  if (!sender?.tab?.id || !msg?.url) return;
+  try { await chrome.tabs.sendMessage(sender.tab.id,{type:"vf-frame-media",url:msg.url,mime:msg.mime||""},{frameId:0}); } catch {}
+}
+
 chrome.runtime.onMessage.addListener((msg,sender,sendResponse)=>{
+  if(msg?.type==="vf-frame-media"){forwardFrameMedia(msg,sender);return false;}
   if(msg?.type==="vf-check-update"){checkForUpdates(true,false).then(sendResponse);return true;}
   if(msg?.type==="vf-get-update"){chrome.storage.local.get("vfUpdate").then(x=>sendResponse({ok:true,info:x.vfUpdate||null}));return true;}
   if(msg?.type==="vf-update-status"){nativeRequest({action:"update-status"},sender.tab?.id).then(r=>sendResponse({ok:true,result:r})).catch(e=>sendResponse({ok:false,error:e.message}));return true;}
