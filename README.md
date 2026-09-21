@@ -1,73 +1,56 @@
-# VideoFlow Downloader
+# VideoFlow 8 Pro
 
-VideoFlow is a Chrome MV3 downloader for supported sites with a direct on-page MP4 button, quality selection, FFmpeg progress, and a built-in updater.
+VideoFlow 8 Pro is the next-generation Chrome MV3 downloader architecture for non-DRM media the user is authorized to download.
 
-## Features
+## What changed in V8
 
-- One-click **Download MP4** button directly on supported video players
-- Quality selection when the media source exposes multiple video streams
-- FFmpeg progress and download speed
-- Self-contained .NET native bridge
-- Built-in **Check for updates / Update now** popup
-- Automatic updater downloads the GitHub package and rebuilds the FFmpeg bridge
-- Creates a timestamped backup before replacing the extension
-- Downloads to `Downloads/VideoFlow`
-- Restricted to the supported domains in `extension/manifest.json`
+- Persistent Native Messaging connection with automatic reconnect.
+- Request IDs so multiple native operations can safely run concurrently.
+- Background engine can keep multiple probe/download requests in flight.
+- Event-driven media discovery remains lightweight and avoids permanent polling loops.
+- Direct progressive media uses the parallel HTTP range engine when supported.
+- HLS/DASH and unsupported range servers continue through FFmpeg.
+- Output validation remains mandatory before a download is reported complete.
+- Incremental native installation: extension-only updates no longer republish the .NET native bridge.
+- New Pro dashboard exposes native-engine state, active jobs, pending requests and update state.
+- V8 work is isolated on the v8-pro branch until the engine is verified.
 
-## First-time installation
+## V8 architecture
 
-1. Open `chrome://extensions`.
-2. Enable **Developer mode**.
-3. Click **Load unpacked** and select this repository's `extension/` folder.
-4. Copy the extension ID shown by Chrome.
-5. Open PowerShell in `native-host/`.
-6. Run:
+Chrome content scripts -> V8 Background Engine -> persistent Native Messaging port -> VideoFlow Native Engine -> Probe / Scheduler / Downloader -> Range Engine / FFmpeg -> Validator -> Downloads/VideoFlow.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install.ps1
-```
+### Request correlation
 
-7. Paste the extension ID.
-8. Restart Chrome.
+Every native request receives a unique request ID. Progress, recovery and completion messages carry that ID, preventing concurrent downloads from receiving each other's events.
 
-The installer creates:
+### Incremental updates
 
-- `VideoFlowNative.exe`
-- `VideoFlowUpdater.exe`
-- Native Messaging registration
-- `install-config.json` containing the local installation path and extension ID
+The installer records SHA-256 hashes for Program.cs and Updater.cs. If only the Chrome extension changed, the native bridge and updater are not rebuilt. If native source changed, only the affected executable is republished.
 
-## Updating
+## First-time V8 installation
 
-After the first-time installation, click the **VideoFlow** toolbar icon.
+1. Load extension/ from this branch using chrome://extensions.
+2. Copy the extension ID.
+3. Open PowerShell in native-host/.
+4. Run:
 
-The popup checks GitHub and shows **Update now** when a newer version is available.
+powershell -ExecutionPolicy Bypass -File .\\install.ps1
 
-The updater:
+5. Paste the extension ID when requested.
+6. Reload the extension.
 
-1. Downloads the latest GitHub package.
-2. Backs up the current `extension` directory.
-3. Installs the new extension files.
-4. Rebuilds the self-contained FFmpeg native bridge.
-5. Re-registers Native Messaging.
-6. Reloads VideoFlow.
+## Performance goals
 
-You should not need to manually download ZIP files for subsequent updates.
+- low UI latency
+- connection reuse
+- concurrent request handling
+- range-based throughput
+- minimal repeated process startup
+- zero unnecessary native rebuilds
+- safe atomic output validation
 
-If an update fails, look for:
+## Security boundary
 
-```
-.videoflow-update.json
-```
+VideoFlow does not bypass DRM, encrypted media, authentication, paywalls, CAPTCHAs or other access controls. It is intended for media that the user is authorized to download.
 
-in the VideoFlow installation directory. A timestamped `.backup-YYYYMMDD-HHMMSS` directory is also created before an extension replacement.
-
-## FFmpeg
-
-The installer expects `ffmpeg.exe` and `ffprobe.exe` to be available. It checks the normal Windows command path and the WinGet links location.
-
-## Limitations
-
-VideoFlow is intended for non-DRM media that you are authorized to download. It does not bypass DRM, encrypted media, authentication, paywalls, CAPTCHAs, or other access controls. Some sites use signed URLs, session-bound headers, MSE, HLS/DASH, or other delivery methods that a generic downloader cannot reliably access.
-
-Respect each site's terms, copyright, and applicable laws.
+Respect site terms, copyright and applicable law.
