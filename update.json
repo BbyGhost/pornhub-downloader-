@@ -1,13 +1,12 @@
 {
-  "version": "7.0.0",
+  "version": "7.1.0",
   "released": "2026-09-21",
   "notes": [
-    "Major visual refresh for the popup and on-page downloader controls",
-    "Cross-origin iframe media detection now forwards sources to the top-frame UI without duplicate widgets",
-    "Media discovery is faster and less CPU-intensive with event-driven resource scanning and de-duplication",
-    "Expanded video/source detection for direct MP4/WebM, HLS and DASH manifests",
-    "FFmpeg/native bridge remains restricted to user-authorized non-DRM media and keeps recovery diagnostics",
-    "Automatic updater continues staged verification, rollback and scheduled maintenance"
+    "Adds a parallel HTTP range-download path for direct video files when the server supports byte ranges",
+    "Uses multiple concurrent ranged requests to improve throughput on progressive MP4/WebM sources",
+    "Keeps HLS/DASH and servers without usable range support on the FFmpeg recovery path",
+    "Retains completed-file validation before reporting a successful download",
+    "Native bridge is rebuilt automatically by the staged updater"
   ],
   "download": "https://github.com/BbyGhost/pornhub-downloader-/archive/refs/heads/main.zip"
 }
