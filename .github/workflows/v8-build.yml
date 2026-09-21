@@ -1,0 +1,41 @@
+name: VideoFlow 8 Pro Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - v8-pro
+
+jobs:
+  build-native:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish native engine
+        shell: pwsh
+        run: dotnet publish native-host/VideoFlowNative.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/native
+
+      - name: Publish updater
+        shell: pwsh
+        run: dotnet publish native-host/Updater.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/updater
+
+      - name: Package engine
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/package | Out-Null
+          Copy-Item artifacts/native/VideoFlowNative.exe artifacts/package/VideoFlowNative.exe
+          Copy-Item artifacts/updater/VideoFlowUpdater.exe artifacts/package/VideoFlowUpdater.exe
+          Compress-Archive -Path artifacts/package/* -DestinationPath artifacts/VideoFlow-8-Pro-win-x64.zip -Force
+
+      - name: Upload native engine artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VideoFlow-8-Pro-win-x64
+          path: artifacts/VideoFlow-8-Pro-win-x64.zip
