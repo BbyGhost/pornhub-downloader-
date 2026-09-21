@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "VideoFlow Downloader",
-  "version": "7.1.0",
-  "description": "VideoFlow 7.1 — faster media detection, iframe support, redesigned UI and resilient non-DRM downloads.",
+  "version": "7.1.1",
+  "description": "VideoFlow 7.1.1 — faster media detection, iframe support, redesigned UI and resilient non-DRM downloads.",
   "permissions": ["nativeMessaging","cookies","storage","alarms"],
   "host_permissions": [
     "https://www.xvideos.com/*","https://xvideos.com/*","https://www.pornhub.com/*","https://pornhub.com/*",
