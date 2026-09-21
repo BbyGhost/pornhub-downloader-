@@ -101,7 +101,7 @@ async function checkForUpdates(manual=false,autoInstall=false) {
 }
 
 async function waitForUpdateCompletion(targetVersion="") {
-  for(let i=0;i<120;i++) {
+  for(let i=0;i<600;i++) {
     await new Promise(r=>setTimeout(r,500));
     try {
       const result=await nativeRequest({action:"update-status"});
@@ -115,7 +115,7 @@ async function waitForUpdateCompletion(targetVersion="") {
       if(status?.ok===false) return false;
     } catch {}
   }
-  await recordDiagnostic("update-timeout",new Error("Automatic update did not report completion within 60 seconds."));
+  await recordDiagnostic("update-timeout",new Error("Automatic update did not report completion within 5 minutes."));
   return false;
 }
 
@@ -142,15 +142,13 @@ chrome.runtime.onMessage.addListener((msg,sender,sendResponse)=>{
   if(msg?.type==="vf-frame-media"){forwardFrameMedia(msg,sender);return false;}
   if(msg?.type==="vf-check-update"){checkForUpdates(true,false).then(sendResponse);return true;}
   if(msg?.type==="vf-get-update"){chrome.storage.local.get("vfUpdate").then(x=>sendResponse({ok:true,info:x.vfUpdate||null}));return true;}
-  if(msg?.type==="vf-update-status"){nativeRequest({action:"update-status"},sender.tab?.id).then(r=>sendResponse({ok:true,result:r})).catch(e=>sendResponse({ok:false,error:e.message}));return true;}
+  if(msg?.type==="vf-update-status"){nativeRequest({action:"update-status"},sender.tab?.id).then(r=>{const st=r?.status;if(st?.ok===false || st?.message==="Updated successfully. Old files cleaned." || st?.message==="Already up to date.") updateRunning=false;sendResponse({ok:true,result:r});if(st?.message==="Updated successfully. Old files cleaned.") setTimeout(()=>{try{chrome.runtime.reload();}catch{}},350);}).catch(e=>sendResponse({ok:false,error:e.message}));return true;}
   if(msg?.type==="vf-update-now"){
     if(updateRunning){sendResponse({ok:false,error:"An update is already running."});return true;}
     updateRunning=true;
-    nativeRequest({action:"update"},sender.tab?.id).then(async r=>{
-      const completed=await waitForUpdateCompletion();
-      if(!completed) throw new Error("Update did not complete. Open chrome://extensions and check the extension error details.");
-      return {ok:true,result:r};
-    }).then(sendResponse).catch(e=>sendResponse({ok:false,error:e.message})).finally(()=>{updateRunning=false;});
+    nativeRequest({action:"update"},sender.tab?.id)
+      .then(r=>sendResponse({ok:true,result:r,started:true}))
+      .catch(e=>{updateRunning=false;sendResponse({ok:false,error:e.message});});
     return true;
   }
   if(msg?.type==="vf-probe"){
