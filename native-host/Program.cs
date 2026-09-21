@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 internal static class Program
 {
     static readonly object LockObj = new();
+    static readonly AsyncLocal<string?> CurrentRequestId = new();
     static readonly Stream Input = Console.OpenStandardInput();
     static readonly Stream Output = Console.OpenStandardOutput();
 
@@ -37,14 +38,33 @@ internal static class Program
                 string origin = Get(root, "origin");
                 string ua = Get(root, "userAgent");
                 string cookie = Get(root, "cookie");
+                string requestId = Get(root, "requestId");
                 int videoStream = -1;
                 if (root.TryGetProperty("videoStream", out var vs) && vs.ValueKind == JsonValueKind.Number)
                     videoStream = vs.GetInt32();
 
-                if (action == "probe") Probe(url, referer, origin, ua, cookie);
-                else if (action == "download") Download(url, Get(root, "filename"), referer, origin, ua, cookie, videoStream);
-                else if (action == "update") { Update(); return; }
-                else if (action == "update-status") Status();
+                if (action == "probe")
+                {
+                    var rid = requestId;
+                    _ = Task.Run(() => { CurrentRequestId.Value = rid; Probe(url, referer, origin, ua, cookie); });
+                }
+                else if (action == "download")
+                {
+                    var rid = requestId;
+                    string filename = Get(root, "filename");
+                    _ = Task.Run(() => { CurrentRequestId.Value = rid; Download(url, filename, referer, origin, ua, cookie, videoStream); });
+                }
+                else if (action == "update")
+                {
+                    CurrentRequestId.Value = requestId;
+                    Update();
+                    return;
+                }
+                else if (action == "update-status")
+                {
+                    CurrentRequestId.Value = requestId;
+                    Status();
+                }
                 else Send(new { @event = "error", error = "Unknown native action: " + action });
             }
         }
@@ -593,7 +613,11 @@ internal static class Program
 
     static void Send(object o)
     {
-        byte[] b = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(o));
+        string json = JsonSerializer.Serialize(o);
+        string rid = CurrentRequestId.Value ?? "";
+        if (!string.IsNullOrWhiteSpace(rid) && json.Length > 1 && json[0] == '{')
+            json = "{\"requestId\":" + JsonSerializer.Serialize(rid) + "," + json.Substring(1);
+        byte[] b = Encoding.UTF8.GetBytes(json);
         lock (LockObj)
         {
             Output.Write(BitConverter.GetBytes(b.Length), 0, 4);
