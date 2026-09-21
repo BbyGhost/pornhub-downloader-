@@ -101,8 +101,8 @@ async function checkForUpdates(manual=false,autoInstall=false) {
 }
 
 async function waitForUpdateCompletion(targetVersion="") {
-  for(let i=0;i<20;i++) {
-    await new Promise(r=>setTimeout(r,3000));
+  for(let i=0;i<60;i++) {
+    await new Promise(r=>setTimeout(r,500));
     try {
       const result=await nativeRequest({action:"update-status"});
       const status=result?.status;
@@ -115,7 +115,7 @@ async function waitForUpdateCompletion(targetVersion="") {
       if(status?.ok===false) return false;
     } catch {}
   }
-  await recordDiagnostic("update-timeout",new Error("Automatic update did not report completion within 60 seconds."));
+  await recordDiagnostic("update-timeout",new Error("Automatic update did not report completion within 30 seconds."));
   return false;
 }
 
