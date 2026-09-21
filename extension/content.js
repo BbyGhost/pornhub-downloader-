@@ -1,10 +1,8 @@
 (() => {
   "use strict";
-  // Only the top document owns the floating UI. Iframes can still host media,
-  // but must not create duplicate buttons/popups.
-  if (window.top !== window) return;
-  if (window.__VIDEOFLOW_SINGLE_BUTTON__) return;
-  window.__VIDEOFLOW_SINGLE_BUTTON__ = true;
+  const IS_TOP_FRAME = window.top === window;
+  if (IS_TOP_FRAME && window.__VIDEOFLOW_SINGLE_BUTTON__) return;
+  if (IS_TOP_FRAME) window.__VIDEOFLOW_SINGLE_BUTTON__ = true;
 
   let widget = null;
   let activeVideo = null;
@@ -43,6 +41,13 @@
       const entries = [...manifests.entries()].sort((a,b) => a[1].time - b[1].time);
       manifests.delete(entries[0][0]);
     }
+  }
+
+  function reportFrameMedia(url, mime = "") {
+    try {
+      if (IS_TOP_FRAME) { rememberManifest(url, mime); scan(); }
+      else chrome.runtime.sendMessage({type:"vf-frame-media",url,mime,frameUrl:location.href}).catch(()=>{});
+    } catch {}
   }
 
   function getDirectVideoSource(video) {
@@ -326,6 +331,12 @@
     positionWidget();
   }
 
+  if (IS_TOP_FRAME) {
+    chrome.runtime.onMessage.addListener(msg => {
+      if (msg?.type === "vf-frame-media" && msg.url) { rememberManifest(msg.url,msg.mime||""); scan(); }
+    });
+  }
+
   chrome.runtime.onMessage.addListener(msg => {
     if (msg?.type !== "vf-progress" || !widget) return;
     const progress = Math.max(0, Math.min(100, Number(msg.progress) || 0));
@@ -336,7 +347,7 @@
 
   window.addEventListener("message", event => {
     if (event.source !== window || !event.data || event.data.source !== "videoflow-fresh") return;
-    if (event.data.type === "media") { rememberManifest(event.data.url, event.data.mime || ""); scan(); }
+    if (event.data.type === "media") reportFrameMedia(event.data.url, event.data.mime || "");
   });
 
   try {
@@ -345,6 +356,24 @@
     hook.onload = () => hook.remove();
     (document.documentElement || document.head || document.body).appendChild(hook);
   } catch (error) { console.warn("VideoFlow page hook failed:", error); }
+
+  if (!IS_TOP_FRAME) {
+    try {
+      document.addEventListener("loadedmetadata", event => {
+        if (event.target instanceof HTMLVideoElement) {
+          const src = event.target.currentSrc || event.target.src;
+          if (src) reportFrameMedia(src, "");
+        }
+      }, true);
+      document.addEventListener("play", event => {
+        if (event.target instanceof HTMLVideoElement) {
+          const src = event.target.currentSrc || event.target.src;
+          if (src) reportFrameMedia(src, "");
+        }
+      }, true);
+    } catch {}
+    return;
+  }
 
   const observer = new MutationObserver(() => { clearTimeout(scanTimer); scanTimer = setTimeout(scan, 100); });
   observer.observe(document.documentElement, { childList:true, subtree:true });
