@@ -23,9 +23,17 @@ internal static class Program
         {
             if (parentPid > 0)
             {
-                try { using var parent = System.Diagnostics.Process.GetProcessById(parentPid); await parent.WaitForExitAsync(); }
-                catch {}
-                await Task.Delay(1200);
+                // Do not wait indefinitely for the native bridge. Chrome may keep the
+                // stdio host process alive briefly after the update request. A short grace
+                // period is enough for it to release file handles without making updates
+                // appear stuck.
+                try
+                {
+                    using var parent = System.Diagnostics.Process.GetProcessById(parentPid);
+                    await parent.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
+                }
+                catch { }
+                await Task.Delay(300);
             }
 
             string ext = Path.Combine(root, "extension");
