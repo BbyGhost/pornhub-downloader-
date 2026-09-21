@@ -276,8 +276,11 @@ internal static class Program
                         psi.ArgumentList.Add("-map"); psi.ArgumentList.Add("0:v:0?");
                     }
                     psi.ArgumentList.Add("-map"); psi.ArgumentList.Add("0:a:0?");
+                    psi.ArgumentList.Add("-sn");
+                    psi.ArgumentList.Add("-dn");
                     psi.ArgumentList.Add("-c"); psi.ArgumentList.Add("copy");
                     psi.ArgumentList.Add("-movflags"); psi.ArgumentList.Add("+faststart");
+                    psi.ArgumentList.Add("-max_interleave_delta"); psi.ArgumentList.Add("0");
                     psi.ArgumentList.Add("-f"); psi.ArgumentList.Add("mp4");
                     psi.ArgumentList.Add(temp);
 
@@ -306,12 +309,22 @@ internal static class Program
                         }
                     }
                     p.WaitForExit();
-                    if (p.ExitCode == 0 && File.Exists(temp) && new FileInfo(temp).Length > 0)
+                    if (p.ExitCode == 0 && File.Exists(temp) && new FileInfo(temp).Length > 65536)
                     {
-                        if (File.Exists(output)) File.Delete(output);
-                        File.Move(temp, output);
-                        Send(new { @event = "complete", path = output, progress = 100, recovered = attempt > 0 });
-                        return;
+                        // A successful FFmpeg exit is not enough: some servers can return
+                        // a tiny HTML/error response or a truncated media object. Validate
+                        // the finished MP4 before exposing it as a completed download.
+                        var validation = ValidateOutput(temp);
+                        if (validation.ok)
+                        {
+                            if (File.Exists(output)) File.Delete(output);
+                            File.Move(temp, output);
+                            Send(new { @event = "complete", path = output, progress = 100, recovered = attempt > 0, bytes = new FileInfo(output).Length, duration = validation.duration });
+                            return;
+                        }
+                        lastError = new Exception("Downloaded file failed media validation: " + validation.error);
+                        Send(new { @event = "recovery", attempt = attempt + 1, message = "Downloaded data was incomplete or invalid; retrying…" });
+                        continue;
                     }
 
                     string detail = diagnostics.ToString().Trim();
@@ -334,6 +347,45 @@ internal static class Program
             throw lastError ?? new Exception("Download failed.");
         }
         catch (Exception ex) { Log(ex); Send(new { @event = "error", error = ex.Message }); }
+    }
+
+    static (bool ok, double duration, string error) ValidateOutput(string path)
+    {
+        try
+        {
+            long size = new FileInfo(path).Length;
+            if (size <= 65536) return (false, 0, "Downloaded file is unexpectedly small.");
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = Ffprobe(),
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
+            };
+            psi.ArgumentList.Add("-v"); psi.ArgumentList.Add("error");
+            psi.ArgumentList.Add("-show_entries"); psi.ArgumentList.Add("format=duration,size");
+            psi.ArgumentList.Add("-of"); psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=0");
+            psi.ArgumentList.Add(path);
+            using var p = Process.Start(psi)!;
+            if (!p.WaitForExit(10000))
+            {
+                try { p.Kill(true); } catch {}
+                return (false, 0, "Downloaded file could not be validated in time.");
+            }
+            string text = p.StandardOutput.ReadToEnd();
+            if (p.ExitCode != 0) return (false, 0, "FFprobe could not read the completed MP4.");
+            double duration = 0;
+            foreach (var line in text.Split(new[] { '\r','\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (line.StartsWith("duration=", StringComparison.OrdinalIgnoreCase))
+                    double.TryParse(line.Substring(9), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out duration);
+            }
+            if (duration <= 0) return (false, 0, "Completed file has no valid duration.");
+            return (true, duration, "");
+        }
+        catch (Exception ex) { return (false, 0, ex.Message); }
     }
 
     static string ExtractUnrecognizedOption(string text)
