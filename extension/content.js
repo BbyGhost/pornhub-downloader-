@@ -33,8 +33,10 @@
     if (!normalized) return;
     const lower = normalized.toLowerCase();
     const type = String(mime).toLowerCase();
-    if (!lower.includes(".m3u8") && !lower.includes(".mpd") && !type.includes("mpegurl") && !type.includes("dash")) return;
-    const entry = { url: normalized, time: Date.now(), type: lower.includes(".mpd") ? "DASH" : "HLS" };
+    const direct = /\.(mp4|webm|mov)(?:[?#]|$)/i.test(lower) || type.includes("video/");
+    const stream = lower.includes(".m3u8") || lower.includes(".mpd") || type.includes("mpegurl") || type.includes("dash");
+    if (!direct && !stream) return;
+    const entry = { url: normalized, time: Date.now(), type: lower.includes(".mpd") ? "DASH" : lower.includes(".m3u8") || type.includes("mpegurl") ? "HLS" : "DIRECT" };
     manifests.set(normalized, entry);
     if (lower.includes("master.m3u8") || lower.includes(".urlset/") || /[\\/]master[._-]/i.test(lower)) masterManifests.set(normalized, entry);
     if (manifests.size > 20) {
